@@ -5,8 +5,9 @@
 
 package com.rf.logs.digester;
 
+import com.rf.logs.digester.digest.AkamaiRegexDigester;
 import com.rf.logs.digester.digest.ApacheRegexDigester;
-import com.rf.logs.metrics.MetricCollection;
+import com.rf.logs.metrics.IMetricCollection;
 
 /**
  *
@@ -22,10 +23,17 @@ public interface IDigester
             {
                 return new ApacheRegexDigester();
             }
+        },
+        AkamaiDigester()
+        {
+            public IDigester getDigester()
+            {
+                return new AkamaiRegexDigester();
+            }
         };
 
         public abstract IDigester getDigester();
     }
 
-    public MetricCollection digest(MetricCollection collection, String content);
+    public IMetricCollection digest(IMetricCollection collection, String content);
 }

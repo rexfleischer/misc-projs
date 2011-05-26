@@ -6,12 +6,11 @@
 package com.rf.logs.digester.digest;
 
 import com.rf.logs.digester.IDigester;
-import com.rf.logs.digester.RegexDefinitions;
-import com.rf.logs.metrics.MetricCollection;
+import com.rf.logs.metrics.IMetricCollection;
 import com.rf.logs.metrics.Metric;
 import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -21,6 +20,14 @@ import java.util.regex.Pattern;
  */
 public class ApacheRegexDigester implements IDigester
 {
+    public static final String MATCH_SPACE      = ".*";
+
+    public static final String MATCH_IP         = "([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})";
+
+    public static final String MATCH_DATETIME   = "\\[([0-3]?[0-9]\\/[a-zA-Z]{3}\\/[0-9]*):([0-9]{2}:[0-9]{2}:[0-9]{2})";
+
+    public static final String MATCH_REQUEST    = " (\\/[^\\\"]*)( |\\\")";
+
     private Pattern pattern;
 
     private long count;
@@ -28,17 +35,13 @@ public class ApacheRegexDigester implements IDigester
     public ApacheRegexDigester()
     {
         this.pattern = Pattern.compile(
-                RegexDefinitions.MATCH_IP +
-                    RegexDefinitions.MATCH_SPACE +
-                RegexDefinitions.MATCH_DATETIME +
-                    RegexDefinitions.MATCH_SPACE +
-                RegexDefinitions.MATCH_REQUEST, Pattern.MULTILINE);
+                MATCH_IP + MATCH_SPACE + MATCH_DATETIME + MATCH_SPACE + MATCH_REQUEST, Pattern.MULTILINE);
         count = 0;
     }
 
     @Override
-    public MetricCollection digest(
-            MetricCollection collection,
+    public IMetricCollection digest(
+            IMetricCollection collection,
             String content)
     {
         if (collection == null)
@@ -51,15 +54,25 @@ public class ApacheRegexDigester implements IDigester
         }
         Matcher matcher = pattern.matcher(content);
 
+        SimpleDateFormat dateFormat = new SimpleDateFormat("MMM-dd-yyyy");
         while(matcher.find())
         {
             try
             {
-                collection.add(new Metric(
-                        matcher.group(1),
-                        matcher.group(4),
-                        matcher.group(2),
-                        matcher.group(3)));
+                Metric metric = new Metric();
+                metric.IP = matcher.group(3);
+                metric.request = matcher.group(5);
+                metric.parseTime(matcher.group(2));
+                try
+                {
+                    metric.date = dateFormat.parse(matcher.group(1));
+                }
+                catch (ParseException ex)
+                {
+                    metric.error = ex.getMessage();
+                }
+
+                collection.add(metric);
                 count++;
                 if (count % 1000 == 0)
                 {
