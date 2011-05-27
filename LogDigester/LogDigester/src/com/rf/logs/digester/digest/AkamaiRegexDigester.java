@@ -5,9 +5,9 @@
 
 package com.rf.logs.digester.digest;
 
-import com.rf.logs.digester.IDigester;
+import com.rf.logs.digester.interfaces.IDigester;
 import com.rf.logs.metrics.Metric;
-import com.rf.logs.metrics.IMetricCollection;
+import com.rf.logs.metrics.interfaces.IMetricCollection;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -49,40 +49,32 @@ public class AkamaiRegexDigester implements IDigester
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         while(matcher.find())
         {
+            Metric metric = new Metric();
+            metric.IP = matcher.group(3);
+            metric.request = matcher.group(5);
+            metric.parseTime(matcher.group(2));
             try
             {
-                Metric metric = new Metric();
-                metric.IP = matcher.group(3);
-                metric.request = matcher.group(5);
-                metric.parseTime(matcher.group(2));
-                try
-                {
-                    metric.date = dateFormat.parse(matcher.group(1));
-                }
-                catch (ParseException ex)
-                {
-                    metric.error = ex.getMessage();
-                }
-
+                metric.date = dateFormat.parse(matcher.group(1));
+            }
+            catch (ParseException ex)
+            {
+                metric.error = ex.getMessage();
+            }
+            try
+            {
                 collection.add(metric);
-                count++;
-                if (count % 1000 == 0)
-                {
-                    System.out.println("found 1000 more");
-                }
             }
             catch (IOException ex)
             {
                 System.err.println(ex.getMessage());
             }
-        }
-        try
-        {
-            collection.commit();
-        }
-        catch (IOException ex)
-        {
-            System.err.println(ex.getMessage());
+
+            count++;
+            if (count % 10000 == 0)
+            {
+                System.out.println(Thread.currentThread().getName() + " found " + count);
+            }
         }
         return collection;
     }

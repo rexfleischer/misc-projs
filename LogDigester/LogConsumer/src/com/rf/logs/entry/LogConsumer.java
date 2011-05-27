@@ -5,18 +5,24 @@
 
 package com.rf.logs.entry;
 
-import com.rf.logs.digester.IDigester;
-import com.rf.logs.digester.IDigester.Digesters;
-import com.rf.logs.metrics.IMetricCollection;
-import com.rf.logs.metrics.IMetricCollection.MetricCollections;
-import com.rf.logs.metrics.MetricQuery;
-import com.rf.logs.metrics.MetricQuery.MetricQueries;
-import com.rf.memory.parts.interfaces.IDumper;
-import com.rf.memory.parts.interfaces.IPresistence;
+import com.rf.logs.digester.Digesters;
+import com.rf.logs.manager.threaded.ThreadedDigestToMetricCollection;
+import com.rf.logs.manager.threaded.ThreadedDumpToPresistence;
+import com.rf.logs.manager.threaded.ThreadedQueryFromMetricCollection;
+import com.rf.logs.metrics.MetricCollections;
+import com.rf.logs.metrics.MetricQueries;
+import com.rf.logs.metrics.interfaces.IMetricCollection;
+import com.rf.memory.persistence.Dumpers;
+import com.rf.memory.persistence.InputStreamSets;
+import com.rf.memory.persistence.LimitOutputBuffers;
+import com.rf.memory.persistence.Persistences;
+import com.rf.memory.persistence.interfaces.IInputStreamSet;
+import com.rf.memory.persistence.interfaces.IPersistence;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -34,58 +40,104 @@ public class LogConsumer {
     public static void main(String[] args) 
             throws FileNotFoundException, IOException, InterruptedException, ClassNotFoundException
     {
-        String targetDir = "C:/Users/rfleischer/Desktop/images-bone3";
-        String workingDir = "C:/Users/rfleischer/Desktop/workingdir";
-        String resultsDir = "C:/Users/rfleischer/Desktop/resultsdir";
-
-        // first, get all of the files and put it in a easy to read form.. note, this
-        // is not required.
-        IPresistence presistence = IPresistence.Presistences.TXTFILE.getPresistence();
-        presistence.init(workingDir, "expanded");
-        IDumper.threadedDirDump(
-                targetDir, null,
-                IDumper.Dumpers.GZIP,
-                presistence, 64, 3);
+        
+        IPersistence workingDir = Persistences.TXTFILE.getPersistence(
+                "C:/Users/REx/Desktop/workingdir",
+                "expanded_");
         System.out.println("query on expanded presistence");
-        System.out.println("total bytes: " + presistence.totalBytes());
-        System.out.println("size: " + presistence.size());
+        System.out.println("total bytes: " + workingDir.totalBytes());
+        System.out.println("size: " + workingDir.size());
 
-        // now, get all of the digestable metrics and put it in a serialized
-        // format in blocks of ArrayLists with 1000 Metric objects each
-        IPresistence metricPresistence = IPresistence.Presistences.SERIALIZINGFILE.getPresistence();
-        metricPresistence.init(resultsDir, "metric");
-        IMetricCollection metrics = MetricCollections.SERIALIZING.getMetricCollection();
-        metrics.init(metricPresistence, 1000);
-        IDigester digester = Digesters.AkamaiDigester.getDigester();
-        for (int i = 0; i < presistence.size(); i++)
+
+
+        IPersistence realizedDir = Persistences.SERIALIZINGFILE.getPersistence(
+                "C:/Users/REx/Desktop/realizeddir",
+                "metrics_");
+        System.out.println("query on metrics presistence");
+        System.out.println("total bytes: " + realizedDir.totalBytes());
+        System.out.println("size: " + realizedDir.size());
+
+
+        if (workingDir.size() == 0)
         {
-            digester.digest(metrics, (String) presistence.getContent(i));
+            IInputStreamSet targetDir = InputStreamSets.FullDirectoryGrab_GZipFile(
+                "C:/Users/REx/Desktop/targetdir");
+            
+            ThreadedDumpToPresistence threadedDumper = new ThreadedDumpToPresistence(
+                    Dumpers.BufferedStreamDump,
+                    workingDir,
+                    LimitOutputBuffers.RegexLineEnd,
+                    256);
+            threadedDumper.threadedDump(targetDir, 3);
+
+            System.out.println("query on expanded presistence");
+            System.out.println("total bytes: " + workingDir.totalBytes());
+            System.out.println("size: " + workingDir.size());
         }
-        System.out.println("query on metric presistence");
-        System.out.println("total bytes: " + metricPresistence.totalBytes());
-        System.out.println("size: " + metricPresistence.size());
 
 
-        MetricQuery query = MetricQueries.REQUEST_COUNT.getMetricQuery();
+        IMetricCollection metricCollection =
+                MetricCollections.SERIALIZING.getMetricCollection();
+        metricCollection.init(realizedDir, 1000);
+        if (realizedDir.size() == 0)
+        {
+            ThreadedDigestToMetricCollection threadedDigester =
+                    new ThreadedDigestToMetricCollection(
+                        metricCollection,
+                        Digesters.W3CRegexDigester);
+            threadedDigester.threadedDigest(workingDir, 3);
+
+            System.out.println("query on metrics presistence");
+            System.out.println("total bytes: " + realizedDir.totalBytes());
+            System.out.println("size: " + realizedDir.size());
+        }
+
+        ThreadedQueryFromMetricCollection threadedQuery = new
+                ThreadedQueryFromMetricCollection(MetricQueries.REQUEST_COUNT);
+        Object[] results = threadedQuery.threadedQuery(metricCollection, 3);
 
         long total = 0;
-        Map<String, Integer> results = query.doQuery(metrics);
-        if (results.isEmpty())
+        Map<String, Integer> result = (Map<String, Integer>) results[0];
+        results[0] = null;
+        for (int i = 1; i < results.length; i++)
+        {
+            Map<String, Integer> thisResult = (Map<String, Integer>) results[i];
+            Iterator<String> it = thisResult.keySet().iterator();
+            while(it.hasNext())
+            {
+                String key = it.next();
+                if (result.containsKey(key))
+                {
+                    result.put(key, result.get(key) + thisResult.get(key));
+                }
+                else
+                {
+                    result.put(key, thisResult.get(key));
+                }
+            }
+            thisResult = null;
+            results[i] = null;
+            System.gc();
+        }
+
+        if (result.isEmpty())
         {
             System.out.println("no results");
         }
         else
         {
-            Map<String, Integer> valueSortedResults = sortByValue(results);
+            result = sortByValue(result);
 
-            for(Map.Entry<String, Integer> entry : valueSortedResults.entrySet())
+            for(Map.Entry<String, Integer> entry : result.entrySet())
             {
                 System.out.println(entry.getKey() + ": " + entry.getValue());
                 total += entry.getValue();
             }
+
+            System.out.println("total metrics found: " + total);
         }
 
-        System.out.println("total results: " + total);
+        //workingDir.clear();
     }
 
     public static <K, V extends Comparable<? super V>> Map<K, V>

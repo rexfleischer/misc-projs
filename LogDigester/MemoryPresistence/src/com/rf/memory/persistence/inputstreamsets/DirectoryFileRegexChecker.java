@@ -112,7 +112,7 @@ public class DirectoryFileRegexChecker extends IInputStreamSet
         String file = "";
         synchronized(lock)
         {
-            if (fileNames.size() >= position)
+            if (fileNames.size() <= position)
             {
                 return null;
             }

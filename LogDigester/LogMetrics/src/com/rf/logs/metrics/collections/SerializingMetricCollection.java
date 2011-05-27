@@ -6,7 +6,7 @@
 package com.rf.logs.metrics.collections;
 
 import com.rf.logs.metrics.Metric;
-import com.rf.logs.metrics.IMetricCollection;
+import com.rf.logs.metrics.interfaces.IMetricCollection;
 import com.rf.memory.persistence.interfaces.IPersistence;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -27,6 +27,8 @@ public class SerializingMetricCollection implements IMetricCollection
     private int iteratorPosition;
 
     private int iteratorChunkAt;
+
+    private long iteratorTotal;
 
     private IPersistence presistence;
 
@@ -84,10 +86,10 @@ public class SerializingMetricCollection implements IMetricCollection
     }
 
     public void beginIteration()
-            throws FileNotFoundException, IOException, ClassNotFoundException
     {
         iteratorPosition = 0;
         iteratorChunkAt = 0;
+        iteratorTotal = 0;
         metrics = new ArrayList<Metric>();
     }
 
@@ -95,6 +97,11 @@ public class SerializingMetricCollection implements IMetricCollection
             throws FileNotFoundException, IOException, ClassNotFoundException
     {
         Metric metric = null;
+        iteratorTotal++;
+        if (iteratorTotal % 10000 == 0)
+        {
+            System.out.println("iteration at " + iteratorTotal);
+        }
         if (iteratorPosition >= metrics.size())
         {
             if (iteratorChunkAt >= presistence.size())

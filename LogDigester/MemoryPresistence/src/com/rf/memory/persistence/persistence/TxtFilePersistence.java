@@ -54,7 +54,7 @@ public class TxtFilePersistence extends IPersistence
 
         // do the actual search
         File[] workingFiles = (new File(workingDir)).listFiles();
-        if (workingFiles.length == 0)
+        if (workingFiles == null)
         {
             // return if there is nothing to check
             return;
@@ -302,8 +302,13 @@ public class TxtFilePersistence extends IPersistence
             throws FileNotFoundException, IOException, ClassNotFoundException
     {
         int inCount = 0;
+        int size = size();
         synchronized(iterLock)
         {
+            if (iterationCounter >= size)
+            {
+                return null;
+            }
             inCount = iterationCounter;
             iterationCounter++;
         }

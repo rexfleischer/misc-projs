@@ -5,8 +5,8 @@
 
 package com.rf.logs.digester.digest;
 
-import com.rf.logs.digester.IDigester;
-import com.rf.logs.metrics.IMetricCollection;
+import com.rf.logs.digester.interfaces.IDigester;
+import com.rf.logs.metrics.interfaces.IMetricCollection;
 import com.rf.logs.metrics.Metric;
 import java.io.IOException;
 import java.text.ParseException;
@@ -26,7 +26,7 @@ public class ApacheRegexDigester implements IDigester
 
     public static final String MATCH_DATETIME   = "\\[([0-3]?[0-9]\\/[a-zA-Z]{3}\\/[0-9]*):([0-9]{2}:[0-9]{2}:[0-9]{2})";
 
-    public static final String MATCH_REQUEST    = " (\\/[^\\\"]*)( |\\\")";
+    public static final String MATCH_REQUEST    = " (\\/[^\\\"]*)\\\"";
 
     private Pattern pattern;
 
@@ -57,40 +57,32 @@ public class ApacheRegexDigester implements IDigester
         SimpleDateFormat dateFormat = new SimpleDateFormat("MMM-dd-yyyy");
         while(matcher.find())
         {
+            Metric metric = new Metric();
+            metric.IP = matcher.group(1);
+            metric.request = matcher.group(4);
+            metric.parseTime(matcher.group(3));
             try
             {
-                Metric metric = new Metric();
-                metric.IP = matcher.group(3);
-                metric.request = matcher.group(5);
-                metric.parseTime(matcher.group(2));
-                try
-                {
-                    metric.date = dateFormat.parse(matcher.group(1));
-                }
-                catch (ParseException ex)
-                {
-                    metric.error = ex.getMessage();
-                }
-
-                collection.add(metric);
-                count++;
-                if (count % 1000 == 0)
-                {
-                    System.out.println("found 1000 more");
-                }
+                metric.date = dateFormat.parse(matcher.group(2));
             }
+            catch (ParseException ex)
+            {
+                metric.error = ex.getMessage();
+            }
+            try
+            {
+                collection.add(metric);
+            } 
             catch (IOException ex)
             {
                 System.err.println(ex.getMessage());
             }
-        }
-        try
-        {
-            collection.commit();
-        } 
-        catch (IOException ex)
-        {
-            System.err.println(ex.getMessage());
+
+            count++;
+            if (count % 10000 == 0)
+            {
+                System.out.println(Thread.currentThread().getName() + " found " + count);
+            }
         }
         return collection;
     }

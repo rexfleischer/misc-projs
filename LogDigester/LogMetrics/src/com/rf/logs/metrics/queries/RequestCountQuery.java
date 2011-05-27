@@ -6,8 +6,8 @@
 package com.rf.logs.metrics.queries;
 
 import com.rf.logs.metrics.Metric;
-import com.rf.logs.metrics.IMetricCollection;
-import com.rf.logs.metrics.MetricQuery;
+import com.rf.logs.metrics.interfaces.IMetricCollection;
+import com.rf.logs.metrics.interfaces.IMetricQuery;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
@@ -17,7 +17,7 @@ import java.util.Map;
  *
  * @author REx
  */
-public class RequestCountQuery implements MetricQuery
+public class RequestCountQuery implements IMetricQuery
 {
 
     public Map<String, Integer> doQuery(IMetricCollection metrics)

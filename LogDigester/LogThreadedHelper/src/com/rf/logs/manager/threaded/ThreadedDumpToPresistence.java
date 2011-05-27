@@ -5,9 +5,12 @@
 
 package com.rf.logs.manager.threaded;
 
+import com.rf.memory.persistence.Dumpers;
+import com.rf.memory.persistence.LimitOutputBuffers;
 import com.rf.memory.persistence.interfaces.IDumper;
 import com.rf.memory.persistence.interfaces.IInputStream;
 import com.rf.memory.persistence.interfaces.IInputStreamSet;
+import com.rf.memory.persistence.interfaces.IPersistence;
 
 /**
  *
@@ -43,15 +46,25 @@ public class ThreadedDumpToPresistence
         }
     }
 
-    private IDumper dumper;
+    private Dumpers dumper;
+    private IPersistence workingDir;
+    private LimitOutputBuffers buffer;
+    private int maxKBBuffer;
 
-    public ThreadedDumpToPresistence(IDumper dumper)
+    public ThreadedDumpToPresistence(
+            Dumpers dumper,
+            IPersistence workingDir,
+            LimitOutputBuffers buffer,
+            int maxKBBuffer)
     {
         if (dumper == null)
         {
             throw new NullPointerException("dumper");
         }
         this.dumper = dumper;
+        this.workingDir = workingDir;
+        this.buffer = buffer;
+        this.maxKBBuffer = maxKBBuffer;
     }
 
     public void threadedDump(IInputStreamSet inputSet, int numOfThreads)
@@ -71,7 +84,11 @@ public class ThreadedDumpToPresistence
         ThreadedDumper[] threads = new ThreadedDumper[numOfThreads];
         for (int i = 0; i < numOfThreads; i++)
         {
-            threads[i] = new ThreadedDumper(inputSet, dumper);
+            threads[i] = new ThreadedDumper(
+                    inputSet,
+                    dumper.getDumper(
+                        workingDir,
+                        buffer.getOutputBuffer(maxKBBuffer)));
             threads[i].start();
         }
 

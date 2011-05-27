@@ -13,34 +13,25 @@ import java.util.regex.Pattern;
  *
  * @author REx
  */
-public enum InputStreamSets
+public class InputStreamSets
 {
-    DirectoryRegexChecker_GZipFile()
+    public static IInputStreamSet DirectoryRegexChecker_GZipFile(String dir, Pattern fileCheck)
     {
-        public IInputStreamSet getInputStream(String dir, Pattern fileCheck)
-        {
-            return new DirectoryFileRegexChecker(dir, fileCheck, FileTypes.GZIP);
-        }
-    },
-    DirectoryRegexChecker_TxtFile()
+        return new DirectoryFileRegexChecker(dir, fileCheck, FileTypes.GZIP);
+    }
+
+    public static IInputStreamSet DirectoryRegexChecker_TxtFile(String dir, Pattern fileCheck)
     {
-        public IInputStreamSet getInputStream(String dir, Pattern fileCheck)
-        {
-            return new DirectoryFileRegexChecker(dir, fileCheck, FileTypes.TEXT);
-        }
-    },
-    FullDirectoryGrab_GZipFile()
+        return new DirectoryFileRegexChecker(dir, fileCheck, FileTypes.TEXT);
+    }
+
+    public static IInputStreamSet FullDirectoryGrab_GZipFile(String dir)
     {
-        public IInputStreamSet getInputStream(String dir)
-        {
-            return new DirectoryFileRegexChecker(dir, null, FileTypes.GZIP);
-        }
-    },
-    FullDirectoryGrab_TxtFile()
+        return new DirectoryFileRegexChecker(dir, null, FileTypes.GZIP);
+    }
+
+    public static IInputStreamSet FullDirectoryGrab_TxtFile(String dir)
     {
-        public IInputStreamSet getInputStream(String dir)
-        {
-            return new DirectoryFileRegexChecker(dir, null, FileTypes.TEXT);
-        }
+        return new DirectoryFileRegexChecker(dir, null, FileTypes.TEXT);
     }
 }

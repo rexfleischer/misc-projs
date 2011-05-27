@@ -54,7 +54,7 @@ public class SerializingPersistence extends IPersistence
 
         // do the actual search
         File[] workingFiles = (new File(workingDir)).listFiles();
-        if (workingFiles.length == 0)
+        if (workingFiles == null)
         {
             // return if there is nothing to check
             return;

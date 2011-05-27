@@ -23,4 +23,6 @@ public enum Dumpers
             return new BufferedStreamDumpToPresistence(presistence, buffer);
         }
     };
+
+    public abstract IDumper getDumper(IPersistence presistence, ILimitOutputBuffer buffer);
 }

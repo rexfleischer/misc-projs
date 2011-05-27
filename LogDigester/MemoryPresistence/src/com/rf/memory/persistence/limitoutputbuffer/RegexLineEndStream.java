@@ -31,7 +31,7 @@ public class RegexLineEndStream extends ILimitOutputBuffer
             throw new IllegalArgumentException("maxSize must be greater then 1");
         }
         this.string  = new StringBuilder();
-        this.maxSize = maxSize;
+        this.maxSize = maxSize * 1024;
         this.sizeAt = 0;
         this.pattern = Pattern.compile("^(.*)\\z", Pattern.MULTILINE);
     }

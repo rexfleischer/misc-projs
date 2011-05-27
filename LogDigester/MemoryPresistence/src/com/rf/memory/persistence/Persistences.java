@@ -15,7 +15,7 @@ import com.rf.memory.persistence.persistence.TxtFilePersistence;
  */
 public enum Persistences
 {
-    TXTFILE()
+    TXTFILE
     {
         /**
          * @dir the directory where this presistence layer is going
@@ -28,7 +28,7 @@ public enum Persistences
             return new TxtFilePersistence(dir, uniqueKey);
         }
     },
-    SERIALIZINGFILE()
+    SERIALIZINGFILE
     {
         /**
          * @dir the directory where this presistence layer is going
@@ -41,4 +41,7 @@ public enum Persistences
             return new SerializingPersistence(dir, uniqueKey);
         }
     };
+
+
+    public abstract IPersistence getPersistence(String context, String uniqueKey);
 }

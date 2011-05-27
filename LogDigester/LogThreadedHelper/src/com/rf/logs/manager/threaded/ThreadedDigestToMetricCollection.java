@@ -5,9 +5,11 @@
 
 package com.rf.logs.manager.threaded;
 
-import com.rf.logs.digester.IDigester;
-import com.rf.logs.metrics.IMetricCollection;
+import com.rf.logs.digester.Digesters;
+import com.rf.logs.digester.interfaces.IDigester;
+import com.rf.logs.metrics.interfaces.IMetricCollection;
 import com.rf.memory.persistence.interfaces.IPersistence;
+import java.io.IOException;
 
 /**
  *
@@ -50,17 +52,17 @@ public class ThreadedDigestToMetricCollection
             }
             catch(Exception ex)
             {
-                
+                System.err.println(ex.getMessage());
             }
         }
     }
 
     private IMetricCollection metricsDump;
 
-    private IDigester digester;
+    private Digesters digester;
 
     public ThreadedDigestToMetricCollection(
-            IMetricCollection metricsDump, IDigester digester)
+            IMetricCollection metricsDump, Digesters digester)
     {
         if (metricsDump == null)
         {
@@ -91,7 +93,7 @@ public class ThreadedDigestToMetricCollection
         ThreadedDigest[] threads = new ThreadedDigest[numOfThreads];
         for (int i = 0; i < numOfThreads; i++)
         {
-            threads[i] = new ThreadedDigest(metricsDump, digester, infoFrom);
+            threads[i] = new ThreadedDigest(metricsDump, digester.getDigester(), infoFrom);
             threads[i].start();
         }
 
@@ -106,6 +108,14 @@ public class ThreadedDigestToMetricCollection
             {
                 System.out.println(ex.getMessage());
             }
+        }
+        try
+        {
+            metricsDump.commit();
+        }
+        catch (IOException ex)
+        {
+            System.err.println(ex.getMessage());
         }
     }
 }
