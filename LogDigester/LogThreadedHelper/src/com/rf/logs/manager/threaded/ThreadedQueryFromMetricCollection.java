@@ -5,9 +5,9 @@
 
 package com.rf.logs.manager.threaded;
 
-import com.rf.logs.metrics.MetricQueries;
+import com.rf.logs.query.MetricQueries;
 import com.rf.logs.metrics.interfaces.IMetricCollection;
-import com.rf.logs.metrics.interfaces.IMetricQuery;
+import com.rf.logs.query.interfaces.IMetricQuery;
 
 /**
  *
@@ -33,7 +33,7 @@ public class ThreadedQueryFromMetricCollection
         {
             try
             {
-                result = querier.doQuery(collection);
+                querier.doQuery(collection);
             }
             catch (Exception e)
             {
@@ -58,7 +58,7 @@ public class ThreadedQueryFromMetricCollection
         this.query = query;
     }
 
-    public Object[] threadedQuery(IMetricCollection collection, int numOfThreads)
+    public Object threadedQuery(IMetricCollection collection, int numOfThreads)
     {
         if (collection == null)
         {
@@ -70,11 +70,12 @@ public class ThreadedQueryFromMetricCollection
         }
 
         collection.beginIteration();
-        Object[] results = new Object[numOfThreads];
+        IMetricQuery[] queries = new IMetricQuery[numOfThreads];
         ThreadedQuery[] threads = new ThreadedQuery[numOfThreads];
         for (int i = 0; i < numOfThreads; i++)
         {
-            threads[i] = new ThreadedQuery(collection, query.getMetricQuery());
+            queries[i] = query.getMetricQuery();
+            threads[i] = new ThreadedQuery(collection, queries[i]);
             threads[i].start();
         }
 
@@ -91,11 +92,13 @@ public class ThreadedQueryFromMetricCollection
             }
         }
 
-        for (int i = 0; i < numOfThreads; i++)
+        for (int i = 1; i < numOfThreads; i++)
         {
-            results[i] = threads[i].getResults();
+            queries[0].collide(queries[i].getResult());
+            queries[i] = null;
+            System.gc();
         }
         
-        return results;
+        return queries[0].getResult();
     }
 }

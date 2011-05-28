@@ -30,7 +30,5 @@ public enum Digesters
         }
     };
 
-
-
     public abstract IDigester getDigester();
 }

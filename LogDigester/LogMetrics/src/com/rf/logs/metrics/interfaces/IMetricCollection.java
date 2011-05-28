@@ -6,10 +6,10 @@
 package com.rf.logs.metrics.interfaces;
 
 import com.rf.logs.metrics.Metric;
-import com.rf.logs.metrics.collections.SerializingMetricCollection;
 import com.rf.memory.persistence.interfaces.IPersistence;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 
 /**
  *
@@ -26,5 +26,8 @@ public interface IMetricCollection
     public void beginIteration();
 
     public Metric next()
+            throws FileNotFoundException, IOException, ClassNotFoundException;
+
+    public ArrayList<Metric> nextChunk()
             throws FileNotFoundException, IOException, ClassNotFoundException;
 }

@@ -6,7 +6,7 @@
 package com.rf.logs.metrics;
 
 import com.rf.logs.metrics.interfaces.IMetricCollection;
-import com.rf.logs.metrics.collections.SerializingMetricCollection;
+import com.rf.logs.metrics.collections.GenericMetricCollection;
 
 /**
  *
@@ -14,11 +14,18 @@ import com.rf.logs.metrics.collections.SerializingMetricCollection;
  */
 public enum MetricCollections
 {
-    SERIALIZING()
+    GENERIC()
     {
         public IMetricCollection getMetricCollection()
         {
-            return new SerializingMetricCollection();
+            return new GenericMetricCollection();
+        }
+    },
+    DEAMONED_SERVER()
+    {
+        public IMetricCollection getMetricCollection()
+        {
+            return new GenericMetricCollection();
         }
     };
 

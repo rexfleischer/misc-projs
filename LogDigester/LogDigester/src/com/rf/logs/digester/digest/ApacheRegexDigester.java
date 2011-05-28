@@ -26,7 +26,7 @@ public class ApacheRegexDigester implements IDigester
 
     public static final String MATCH_DATETIME   = "\\[([0-3]?[0-9]\\/[a-zA-Z]{3}\\/[0-9]*):([0-9]{2}:[0-9]{2}:[0-9]{2})";
 
-    public static final String MATCH_REQUEST    = " (\\/[^\\\"]*)\\\"";
+    public static final String MATCH_REQUEST    = " (\\/[^\\\" ?]*)([^\\\"])?";
 
     private Pattern pattern;
 
@@ -60,6 +60,7 @@ public class ApacheRegexDigester implements IDigester
             Metric metric = new Metric();
             metric.IP = matcher.group(1);
             metric.request = matcher.group(4);
+            metric.param = matcher.group(5);
             metric.parseTime(matcher.group(3));
             try
             {

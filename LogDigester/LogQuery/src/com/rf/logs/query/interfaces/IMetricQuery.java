@@ -3,11 +3,11 @@
  * and open the template in the editor.
  */
 
-package com.rf.logs.metrics.interfaces;
+package com.rf.logs.query.interfaces;
 
+import com.rf.logs.metrics.interfaces.IMetricCollection;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Map;
 
 /**
  *
@@ -15,6 +15,10 @@ import java.util.Map;
  */
 public interface IMetricQuery
 {
-    public Map<String, Integer> doQuery(IMetricCollection metrics)
+    public void doQuery(IMetricCollection metrics)
             throws FileNotFoundException, IOException, ClassNotFoundException;
+
+    public void collide(Object result);
+
+    public Object getResult();
 }

@@ -16,7 +16,7 @@ import java.util.ArrayList;
  *
  * @author REx
  */
-public class SerializingMetricCollection implements IMetricCollection
+public class GenericMetricCollection implements IMetricCollection
 {
     private final Object metricLock;
 
@@ -30,11 +30,13 @@ public class SerializingMetricCollection implements IMetricCollection
 
     private long iteratorTotal;
 
+    private long iteratorLastNotice;
+
     private IPersistence presistence;
 
     private ArrayList<Metric> metrics;
 
-    public SerializingMetricCollection()
+    public GenericMetricCollection()
     {
         metrics = new ArrayList<Metric>();
         metricLock = new Object();
@@ -90,38 +92,79 @@ public class SerializingMetricCollection implements IMetricCollection
         iteratorPosition = 0;
         iteratorChunkAt = 0;
         iteratorTotal = 0;
-        metrics = new ArrayList<Metric>();
+        metrics = null;
     }
 
-    public synchronized Metric next()
+    public Metric next()
             throws FileNotFoundException, IOException, ClassNotFoundException
     {
         Metric metric = null;
         iteratorTotal++;
         if (iteratorTotal % 10000 == 0)
         {
-            System.out.println("iteration at " + iteratorTotal);
+            System.out.println("total iterations at " + iteratorTotal);
         }
-        if (iteratorPosition >= metrics.size())
+        synchronized(metricLock)
+        {
+            if (metrics == null)
+            {
+                metrics = getNextChunk();
+                iteratorPosition = 0;
+            }
+            if (iteratorPosition >= metrics.size())
+            {
+                if (iteratorChunkAt >= presistence.size())
+                {
+                    return null;
+                }
+                metrics = getNextChunk();
+                if (metrics == null)
+                {
+                    return null;
+                }
+                metric = metrics.get(0);
+                iteratorPosition = 1;
+            }
+            else
+            {
+                metric = metrics.get(iteratorPosition);
+                iteratorPosition++;
+            }
+        }
+        return metric;
+    }
+
+    public ArrayList<Metric> nextChunk()
+            throws FileNotFoundException, IOException, ClassNotFoundException
+    {
+        ArrayList<Metric> result = null;
+        synchronized(metricLock)
         {
             if (iteratorChunkAt >= presistence.size())
             {
                 return null;
             }
-            metrics = getNextChunk();
             if (metrics == null)
             {
-                return null;
+                result = getNextChunk();
+                if (result == null)
+                {
+                    return null;
+                }
+                iteratorTotal += result.size();
             }
-            metric = metrics.get(0);
-            iteratorPosition = 1;
+            else
+            {
+                iteratorTotal += metrics.size() - iteratorPosition;
+                result = metrics;
+                metrics = null;
+            }
+            if (iteratorLastNotice <= iteratorTotal + 10000)
+            {
+                System.out.println("total iterations at " + iteratorTotal);
+            }
         }
-        else
-        {
-            metric = metrics.get(iteratorPosition);
-            iteratorPosition++;
-        }
-        return metric;
+        return result;
     }
 
     private ArrayList<Metric> getNextChunk()
@@ -134,8 +177,13 @@ public class SerializingMetricCollection implements IMetricCollection
             {
                 return null;
             }
-            _metrics = (ArrayList<Metric>) presistence.getContent(iteratorChunkAt);
+            Object result = presistence.getContent(iteratorChunkAt);
             iteratorChunkAt++;
+            if (result == null)
+            {
+                return null;
+            }
+            _metrics = (ArrayList<Metric>) result;
             if (_metrics.isEmpty())
             {
                 _metrics = null;

@@ -3,10 +3,10 @@
  * and open the template in the editor.
  */
 
-package com.rf.logs.metrics;
+package com.rf.logs.query;
 
-import com.rf.logs.metrics.interfaces.IMetricQuery;
-import com.rf.logs.metrics.queries.RequestCountQuery;
+import com.rf.logs.query.interfaces.IMetricQuery;
+import com.rf.logs.query.queries.RequestCountQuery;
 
 /**
  *

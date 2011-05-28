@@ -18,6 +18,7 @@ public class Metric implements Serializable
 {
     public String   IP;
     public String   request;
+    public String   param;
     public Date     date;
     public Integer  time;
     public String   error;
@@ -26,12 +27,13 @@ public class Metric implements Serializable
     {
         IP      = null;
         request = null;
+        param   = null;
         date    = null;
         time    = 0;
         error   = null;
     }
 
-    public Metric(String IP, String request, String time, String dateFormat, String date)
+    public Metric(String IP, String request, String param, String time, String dateFormat, String date)
     {
         this.IP      = IP;
         this.request = request;
