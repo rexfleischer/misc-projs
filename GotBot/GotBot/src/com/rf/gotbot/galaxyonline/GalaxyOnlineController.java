@@ -5,10 +5,10 @@
 package com.rf.gotbot.galaxyonline;
 
 import com.rf.gotbot.gameplay.GameBot;
-import com.rf.gotbot.image.ImageCheckAlgorithm;
-import com.rf.gotbot.image.ImageCheckAlgorithms;
-import com.rf.gotbot.image.ImageCheckConfig;
-import com.rf.gotbot.image.util.ConvertToGreyScale;
+import com.rf.gotbot.input.ImageCheckAlgorithm;
+import com.rf.gotbot.input.ImageCheckAlgorithms;
+import com.rf.gotbot.input.ImageCheckConfig;
+import com.rf.gotbot.image.transducers.RGBBufferedImageToGotBotGrey;
 import com.rf.gotbot.output.SystemOutput;
 import java.awt.AWTException;
 import java.awt.Rectangle;
@@ -72,13 +72,16 @@ public class GalaxyOnlineController implements GameBot
     
     private void putHelper(GalaxyOnlineImage putting) throws IOException
     {
+        RGBBufferedImageToGotBotGrey transducer = 
+                new RGBBufferedImageToGotBotGrey();
         String[] images = putting.getImages();
         for(String image : images)
         {
             checker.setImage(
                     putting.name(), 
-                    ConvertToGreyScale.convert(
-                        ImageIO.read(new File(workingDir + "/" + image + ".png"))));
+                    transducer.transduce(
+                        ImageIO.read(new File(workingDir + "/" + image + ".png")))
+                    .toBufferedImage());
         }
         
         boolean[] ignores = putting.getIgnores();

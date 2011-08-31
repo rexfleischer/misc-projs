@@ -8,12 +8,13 @@ import com.rf.gotbot.galaxyonline.GalaxyOnlineCommand;
 import com.rf.gotbot.galaxyonline.GalaxyOnlineController;
 import com.rf.gotbot.gameplay.GameBot;
 import com.rf.gotbot.gameplay.GameCycle;
-import com.rf.gotbot.image.util.ConvertToGreyScale;
-import com.rf.gotbot.image.util.DeltaImage;
-import com.rf.gotbot.image.util.ScreenShot;
-import com.rf.gotbot.image.util.ShowImage;
+import com.rf.gotbot.image.transducers.GotBotGreyToDelta;
+import com.rf.gotbot.image.transducers.RGBBufferedImageToGotBotGrey;
+import com.rf.gotbot.image.types.DeltaImage;
+import com.rf.gotbot.image.types.GreyScaleImage;
+import com.rf.gotbot.input.util.ScreenShot;
+import com.rf.gotbot.output.util.ShowImage;
 import java.awt.Robot;
-import java.awt.image.BufferedImage;
 
 /**
  *
@@ -28,13 +29,37 @@ public enum GotBots
         {
             try
             {
-//                BufferedImage image = ImageIO.read(new File(
-//                        "C:/Users/REx/Desktop/galaxy online images/CHECK_CLOCK.png"));
-                BufferedImage image = ScreenShot.shoot(new Robot());
+                RGBBufferedImageToGotBotGrey transducer 
+                        = new RGBBufferedImageToGotBotGrey();
+                GreyScaleImage image = transducer.transduce(
+                        ScreenShot.shoot(new Robot()));
                 
-                DeltaImage delta = new DeltaImage(image);
-                //image = ConvertToGreyScale.convert(image);
-                ShowImage.show(delta.toDeltaBufferedImage());
+                ShowImage.show(image.toBufferedImage());
+            }
+            catch(Exception ex)
+            {
+                ex.printStackTrace();
+            }
+        }
+    },
+    TEST_SCREEN_SHOT_DELTA()
+    {
+        @Override
+        public void main()
+        {
+            try
+            {
+                RGBBufferedImageToGotBotGrey greyTransducer = 
+                        new RGBBufferedImageToGotBotGrey();
+                GotBotGreyToDelta deltaTransducer = 
+                        new GotBotGreyToDelta();
+                
+                DeltaImage image = 
+                        deltaTransducer.transduce(
+                            greyTransducer.transduce(
+                                ScreenShot.shoot(new Robot())));
+                
+                ShowImage.show(image.toBufferedImage());
             }
             catch(Exception ex)
             {
@@ -46,7 +71,8 @@ public enum GotBots
     {
 
         @Override
-        public void main() {
+        public void main()
+        {
             throw new UnsupportedOperationException("Not supported yet.");
         }
         
