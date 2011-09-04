@@ -5,7 +5,7 @@
 
 package com.rf.dcore.operation;
 
-import java.util.ArrayList;
+import com.rf.dcore.util.record.IndexedRecord;
 
 /**
  *
@@ -13,7 +13,13 @@ import java.util.ArrayList;
  */
 public interface KeySetOperation
 {
-    public  ArrayList<Integer> exec(
-            ArrayList<Integer> left,
-            ArrayList<Integer> right);
+    /**
+     * left and right MUST be sorted!!!!!!
+     * @param left
+     * @param right
+     * @return 
+     */
+    public  IndexedRecord[] exec(
+            IndexedRecord[] left,
+            IndexedRecord[] right);
 }

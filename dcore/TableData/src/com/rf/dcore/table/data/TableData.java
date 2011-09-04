@@ -6,6 +6,8 @@
 package com.rf.dcore.table.data;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Map;
 
 /**
  *
@@ -18,4 +20,12 @@ public interface TableData
     public void close();
 
     public int insert(ByteBuffer data);
+    
+    public void update(int key, ByteBuffer data);
+    
+    public ByteBuffer select(int key);
+    
+    public ArrayList<ByteBuffer> selectAll(int[] keys);
+    
+    public ByteBuffer delete(int key);
 }

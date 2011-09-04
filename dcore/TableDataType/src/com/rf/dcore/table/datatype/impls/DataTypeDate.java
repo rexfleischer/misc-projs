@@ -21,7 +21,7 @@ public class DataTypeDate implements DataType
         if (!(data instanceof Long))
         {
             throw new IllegalArgumentException(
-                    "data must be of instance Integer");
+                    "data must be of instance Long");
         }
         return (Long) data;
     }

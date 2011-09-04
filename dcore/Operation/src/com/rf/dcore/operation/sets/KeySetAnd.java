@@ -6,8 +6,9 @@
 package com.rf.dcore.operation.sets;
 
 import com.rf.dcore.operation.KeySetOperation;
+import com.rf.dcore.util.record.IndexedRecord;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.Arrays;
 
 /**
  *
@@ -15,33 +16,36 @@ import java.util.Iterator;
  */
 public class KeySetAnd implements KeySetOperation
 {
-
-    public ArrayList<Integer> exec(ArrayList<Integer> left, ArrayList<Integer> right)
+    @Override
+    public  IndexedRecord[] exec(
+            IndexedRecord[] left, 
+            IndexedRecord[] right)
     {
-        ArrayList<Integer> result = new ArrayList<Integer>();
-        ArrayList<Integer> comp = null;
-        Iterator<Integer> it = null;
-
-        if (left.size() > right.size())
+        IndexedRecord[] must = null;
+        IndexedRecord[] checking = null;
+        
+        if (left.length > right.length)
         {
-            it = right.listIterator();
-            comp = left;
+            must = left;
+            checking = right;
         }
         else
         {
-            it = left.listIterator();
-            comp = right;
+            must = right;
+            checking = left;
         }
-
-        while(it.hasNext())
+        
+        ArrayList<IndexedRecord> buffer = new ArrayList<>(checking.length);
+        for (IndexedRecord check : checking)
         {
-            Integer curr = it.next();
-            if (comp.indexOf(curr) != -1)
+            if (Arrays.binarySearch(must, check) >= 0)
             {
-                result.add(curr);
+                buffer.add(check);
             }
         }
+        
+        IndexedRecord[] result = (IndexedRecord[])buffer.toArray();
+        Arrays.sort(result);
         return result;
     }
-
 }

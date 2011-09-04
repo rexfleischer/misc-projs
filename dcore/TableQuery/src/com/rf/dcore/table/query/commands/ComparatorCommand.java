@@ -6,7 +6,6 @@
 package com.rf.dcore.table.query.commands;
 
 import com.rf.dcore.operation.ComparatorOperations;
-import com.rf.dcore.table.query.logictree.CommandNode;
 
 /**
  *
@@ -41,10 +40,4 @@ public class ComparatorCommand
         this.operation  = operation;
         this.value      = value;
     }
-
-//    public int compareTo(QueryCommand o)
-//    {
-//        return o.operation.getOperation().order() -
-//                 operation.getOperation().order();
-//    }
 }

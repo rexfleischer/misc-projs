@@ -5,6 +5,12 @@
 
 package com.rf.dcore.operation;
 
+import com.rf.dcore.operation.comparator.ComparatorEqual;
+import com.rf.dcore.operation.comparator.ComparatorGreaterThan;
+import com.rf.dcore.operation.comparator.ComparatorLessThan;
+import com.rf.dcore.operation.comparator.ComparatorNotEqual;
+import com.rf.dcore.operation.comparator.ComparatorRange;
+
 /**
  *
  * @author REx
@@ -15,35 +21,35 @@ public enum ComparatorOperations
     {
         protected ComparatorOperation getNew()
         {
-            return null;
+            return new ComparatorNotEqual();
         }
     },
     Equal()
     {
         protected ComparatorOperation getNew()
         {
-            return null;
+            return new ComparatorEqual();
         }
     },
     Range()
     {
         protected ComparatorOperation getNew()
         {
-            return null;
+            return new ComparatorRange();
         }
     },
     GreaterThan()
     {
         protected ComparatorOperation getNew()
         {
-            return null;
+            return new ComparatorGreaterThan();
         }
     },
     LessThan()
     {
         protected ComparatorOperation getNew()
         {
-            return null;
+            return new ComparatorLessThan();
         }
     };
 

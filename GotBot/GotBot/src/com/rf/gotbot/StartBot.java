@@ -4,8 +4,6 @@
  */
 package com.rf.gotbot;
 
-import javax.imageio.ImageIO;
-
 /**
  *
  * @author REx

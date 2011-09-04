@@ -6,8 +6,9 @@
 package com.rf.dcore.operation.sets;
 
 import com.rf.dcore.operation.KeySetOperation;
+import com.rf.dcore.util.record.IndexedRecord;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.Arrays;
 
 /**
  *
@@ -15,34 +16,41 @@ import java.util.Iterator;
  */
 public class KeySetOr implements KeySetOperation
 {
-
-    public ArrayList<Integer> exec(ArrayList<Integer> left, ArrayList<Integer> right)
+    @Override
+    public  IndexedRecord[] exec(
+            IndexedRecord[] left, 
+            IndexedRecord[] right) 
     {
-        ArrayList<Integer> comp = null;
-        ArrayList<Integer> result = null;
-        Iterator<Integer> it = null;
-
-        if (left.size() > right.size())
+        IndexedRecord[] must = null;
+        IndexedRecord[] checking = null;
+        
+        if (left.length > right.length)
         {
-            result = new ArrayList<Integer>(left);
-            comp = left;
-            it = right.listIterator();
+            must = left;
+            checking = right;
         }
         else
         {
-            result = new ArrayList<Integer>(right);
-            comp = right;
-            it = left.listIterator();
+            must = right;
+            checking = left;
         }
         
-        while(it.hasNext())
+        ArrayList<IndexedRecord> buffer = new ArrayList<>(checking.length);
+        for (IndexedRecord check : checking)
         {
-            Integer curr = it.next();
-            if (comp.indexOf(curr) == -1)
+            if (Arrays.binarySearch(must, check) < 0)
             {
-                result.add(curr);
+                buffer.add(check);
             }
         }
+        
+        IndexedRecord[] bufferedCheck = (IndexedRecord[])buffer.toArray();
+        IndexedRecord[] result = new IndexedRecord[must.length + bufferedCheck.length];
+        
+        System.arraycopy(must, 0, result, 0, must.length);
+        System.arraycopy(bufferedCheck, 0, result, must.length, bufferedCheck.length);
+        
+        Arrays.sort(result);
         
         return result;
     }

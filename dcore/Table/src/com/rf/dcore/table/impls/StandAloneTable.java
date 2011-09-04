@@ -1,21 +1,21 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 
 package com.rf.dcore.table.impls;
 
 import com.rf.dcore.table.Table;
 import com.rf.dcore.table.data.TableData;
 import com.rf.dcore.table.data.TableDatas;
+import com.rf.dcore.table.datatype.DataType;
 import com.rf.dcore.table.datatype.DataTypes;
 import com.rf.dcore.table.definition.TableColumn;
 import com.rf.dcore.table.definition.TableColumnInit;
+import com.rf.dcore.table.exception.TableDataAndIndexerMismatch;
+import com.rf.dcore.table.keyquery.exceptions.IllegalOperationException;
+import com.rf.dcore.table.keyquery.exceptions.IndexerNotFoundException;
 import com.rf.dcore.table.query.TableQuery;
 import com.rf.dcore.table.exception.TableException;
 import com.rf.dcore.table.indexer.TableIndexer;
 import com.rf.dcore.table.indexer.TableIndexers;
-import com.rf.dcore.table.query.logictree.CommandNode;
+import com.rf.dcore.table.keyquery.impls.PrimaryKeysOnly;
 import com.rf.dcore.util.FileSerializer;
 import java.io.File;
 import java.io.IOException;
@@ -33,6 +33,21 @@ import java.util.Map;
  */
 public class StandAloneTable implements Table
 {
+    
+    //<editor-fold defaultstate="collapsed" desc="public class KeyDataPair">
+    public class KeyDataPair
+    {
+        public int key;
+        public Map<String, Object> data;
+        
+        public KeyDataPair(int key, Map<String, Object> data)
+        {
+            this.key    = key;
+            this.data   = data;
+        }
+    }
+    //</editor-fold>
+    
     
     // <editor-fold defaultstate="collapsed" desc="public class TableMasterData">
     public class TableMasterData implements Serializable
@@ -52,7 +67,6 @@ public class StandAloneTable implements Table
                 String dataMasterFile,
                 String dataTableType,
                 String[] indexMasterFiles,
-                String indexerType,
                 int recordSize)
         {
             this.workingDir = workingDir;
@@ -76,10 +90,9 @@ public class StandAloneTable implements Table
                     workingDir,
                     tableName,
                     (TableColumn[]) columns.toArray(),
-                    dataTable.getMasterFile(),
+                    tableData.getMasterFile(),
                     dataTableType.name(),
                     (String[]) indexers.keySet().toArray(),
-                    indexerType.name(),
                     recordSize));
     }
     // </editor-fold>
@@ -94,13 +107,11 @@ public class StandAloneTable implements Table
 
     private ArrayList<TableColumn> columns;
 
-    private TableData dataTable;
+    private TableData tableData;
 
     private TableDatas dataTableType;
 
     private Map<String, TableIndexer> indexers;
-
-    private TableIndexers indexerType;
 
     private int recordSize;
     // </editor-fold>
@@ -109,15 +120,14 @@ public class StandAloneTable implements Table
     // <editor-fold defaultstate="collapsed" desc="public StandAloneTable()">
     public StandAloneTable()
     {
-        workingDir = null;
-        tableName = null;
-        masterFileName = null;
-        columns = null;
-        dataTable = null;
-        indexers = null;
-        dataTableType = null;
-        indexerType = null;
-        recordSize = -1;
+        workingDir      = null;
+        tableName       = null;
+        masterFileName  = null;
+        columns         = null;
+        tableData       = null;
+        indexers        = null;
+        dataTableType   = null;
+        recordSize      = -1;
     }
     // </editor-fold>
 
@@ -184,7 +194,10 @@ public class StandAloneTable implements Table
         try
         {
             recordSize = 0;
-            columns = new ArrayList<TableColumn>(definition.length);
+            // plus one because the system always automatically add
+            // a primary key column at the beginning
+            columns = new ArrayList<>(definition.length + 1);
+            columns.add(TableColumn.primaryKeyColumn);
 
             for (int i = 0; i < definition.length; i++)
             {
@@ -205,7 +218,7 @@ public class StandAloneTable implements Table
                         definition[i].getIndexerType().name()));
             }
 
-            indexers = new HashMap<String, TableIndexer>();
+            indexers = new HashMap<>();
             for (int i = 0; i < definition.length; i++)
             {
                 if (definition[i].isIndexed())
@@ -220,7 +233,7 @@ public class StandAloneTable implements Table
                 }
             }
 
-            dataTable = ((TableDatas) data.get(TABLE_TYPE)).createTable(
+            tableData = ((TableDatas) data.get(TABLE_TYPE)).createTable(
                     tableName,
                     workingDir,
                     2000,
@@ -256,10 +269,10 @@ public class StandAloneTable implements Table
             recordSize = masterData.recordSize;
             workingDir = masterData.workingDir;
             tableName = masterData.tableName;
-            columns = new ArrayList<TableColumn>(masterData.definition.length);
+            columns = new ArrayList<>(masterData.definition.length);
             columns.addAll(Arrays.asList(masterData.definition));
 
-            indexers = new HashMap<String, TableIndexer>(
+            indexers = new HashMap<>(
                     masterData.indexMasterFiles.length);
             for (String name : masterData.indexMasterFiles)
             {
@@ -273,11 +286,11 @@ public class StandAloneTable implements Table
                             .initIndexer(indexerMaster));
             }
 
-            dataTable = TableDatas
+            tableData = TableDatas
                     .valueOf(masterData.dataTableType)
                     .initTable(masterData.dataMasterFile);
         }
-        catch (Exception ex)
+        catch (IOException | ClassNotFoundException ex)
         {
             throw new TableException(
                     "an error occurred while initiating the table",
@@ -299,7 +312,7 @@ public class StandAloneTable implements Table
                 indexer.close();
             }
 
-            dataTable.close();
+            tableData.close();
 
             saveMasterData();
         } 
@@ -319,6 +332,36 @@ public class StandAloneTable implements Table
     {
         try
         {
+            int[] keys = (new PrimaryKeysOnly())
+                    .queryForKeys(query.commandsArray(), indexers); 
+            
+            int counter = 0;
+            
+            for(int key : keys)
+            {
+                ByteBuffer rawData = tableData.delete(key);
+                
+                if (rawData == null)
+                {
+                    continue;
+                }
+                
+                Map<String, Object> data = readyMapFromBuffer(rawData);
+                counter++;
+                
+                Iterator<String> it = indexers.keySet().iterator();
+                while(it.hasNext())
+                {
+                    String indexerName = it.next();
+                    indexers.get(indexerName).delete(
+                                    DataTypes
+                                        .valueOf(indexerName)
+                                        .getInstance()
+                                        .convert(data.get(indexerName)), 
+                                    key);
+                }
+            }
+            
             return 0;
         } 
         catch (Exception ex)
@@ -337,15 +380,8 @@ public class StandAloneTable implements Table
     {
         try
         {
-            ByteBuffer insert = ByteBuffer.allocate(recordSize);
-            for(TableColumn column : columns)
-            {
-                DataTypes.valueOf(column.getDatatype())
-                        .getInstance()
-                        .write(insert, data.get(column.getName()));
-            }
-
-            int key = dataTable.insert(insert);
+            ByteBuffer insert = readyBufferFromMap(data);
+            int key = tableData.insert(insert);
             
             Iterator<String> it = indexers.keySet().iterator();
             while(it.hasNext())
@@ -378,9 +414,31 @@ public class StandAloneTable implements Table
     {
         try
         {
-            return null;
+            int[] keys = (new PrimaryKeysOnly()).queryForKeys(
+                    query.commandsArray(), indexers); 
+            
+            if (keys.length == 0)
+            {
+                return new ArrayList<>();
+            }
+            ArrayList<Map<String, Object>> result = new ArrayList<>(keys.length);
+            
+            for(int key : keys)
+            {
+                ByteBuffer rawData = tableData.select(key);
+                if (rawData == null)
+                {
+                    throw new TableDataAndIndexerMismatch(
+                            "key " + key + " returned no data from tableData while indexed");
+                }
+                result.add(readyMapFromBuffer(rawData));
+            }
+            
+            return result;
         } 
-        catch (Exception ex)
+        catch ( IllegalOperationException | 
+                IndexerNotFoundException | 
+                TableDataAndIndexerMismatch ex)
         {
             throw new TableException(
                     "an error occurred while selecting from the table",
@@ -396,7 +454,43 @@ public class StandAloneTable implements Table
     {
         try
         {
-            return 0;
+            int[] keys = (new PrimaryKeysOnly()).queryForKeys(
+                    query.commandsArray(), indexers);
+            
+            String[] recordUpdates = (String[])data.keySet().toArray();
+            
+            for(int key : keys)
+            {
+                ByteBuffer rawData = tableData.select(key);
+                if (rawData == null)
+                {
+                    throw new TableDataAndIndexerMismatch(
+                            "key " + key + " returned no data from tableData while indexed");
+                }
+                Map<String, Object> currentData = readyMapFromBuffer(rawData);
+                
+                for(String update : recordUpdates)
+                {
+                    Object updatedColumnRecord = data.get(update);
+                    if (indexers.containsKey(update))
+                    {
+                        TableIndexer indexer = indexers.get(update);
+                        DataType datatype = DataTypes.valueOf(update).getInstance();
+                        indexer.delete(
+                                    datatype.convert(currentData.get(update)), 
+                                    key);
+                        indexer.insert(
+                                    datatype.convert(updatedColumnRecord), 
+                                    key);
+                    }
+                    currentData.put(update, updatedColumnRecord);
+                }
+                
+                rawData = readyBufferFromMap(currentData);
+                tableData.update(key, rawData);
+            }
+            
+            return keys.length;
         }
         catch (Exception ex)
         {
@@ -406,13 +500,37 @@ public class StandAloneTable implements Table
         }
     }
     // </editor-fold>
-
     
-    private int[] getKeys(CommandNode[] query)
+
+    //<editor-fold defaultstate="collapsed" desc="buffer conversions">
+    private Map<String, Object> readyMapFromBuffer(ByteBuffer data)
     {
+        Map<String, Object> result = new HashMap<>(columns.size());
         
-
-        return null;
+        for(TableColumn column : columns)
+        {
+            result.put(
+                    column.getName(),
+                    DataTypes
+                        .valueOf(column.getDatatype())
+                        .getInstance()
+                        .read(data));
+        }
+        
+        return result;
     }
-
+    
+    private ByteBuffer readyBufferFromMap(Map<String, Object> data)
+    {
+        ByteBuffer result = ByteBuffer.allocate(recordSize);
+        for(TableColumn column : columns)
+        {
+            DataTypes.valueOf(column.getDatatype())
+                    .getInstance()
+                    .write(result, data.get(column.getName()));
+        }
+        return result;
+    }
+    //</editor-fold>
+    
 }

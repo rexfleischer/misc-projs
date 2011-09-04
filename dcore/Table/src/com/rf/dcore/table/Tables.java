@@ -5,7 +5,6 @@
 
 package com.rf.dcore.table;
 
-import com.rf.dcore.table.definition.TableColumn;
 import com.rf.dcore.table.definition.TableColumnInit;
 import com.rf.dcore.table.exception.TableException;
 import com.rf.dcore.table.impls.StandAloneTable;

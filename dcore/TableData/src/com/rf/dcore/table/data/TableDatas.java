@@ -5,8 +5,6 @@
 
 package com.rf.dcore.table.data;
 
-import com.rf.dcore.data.pagination.DataOrdering;
-
 /**
  *
  * @author REx

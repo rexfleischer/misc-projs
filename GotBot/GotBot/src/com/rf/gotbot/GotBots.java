@@ -69,11 +69,27 @@ public enum GotBots
     },
     SAVE_SCREEN_SHOT()
     {
-
         @Override
         public void main()
         {
-            throw new UnsupportedOperationException("Not supported yet.");
+            try
+            {
+                RGBBufferedImageToGotBotGrey greyTransducer = 
+                        new RGBBufferedImageToGotBotGrey();
+                GotBotGreyToDelta deltaTransducer = 
+                        new GotBotGreyToDelta();
+                
+                DeltaImage image = 
+                        deltaTransducer.transduce(
+                            greyTransducer.transduce(
+                                ScreenShot.shoot(new Robot())));
+                
+                ShowImage.show(image.toBufferedImage());
+            }
+            catch(Exception ex)
+            {
+                ex.printStackTrace();
+            }
         }
         
     },
