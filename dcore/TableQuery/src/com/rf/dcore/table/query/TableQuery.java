@@ -20,9 +20,9 @@ public class TableQuery
 
     public TableQuery(final List<CommandNode> commands)
     {
-        List<CommandNode> sorted = new ArrayList<CommandNode>(commands);
+        List<CommandNode> sorted = new ArrayList<>(commands);
         //Collections.sort(sorted);
-        this.commands = new ArrayList<CommandNode>(sorted);
+        this.commands = new ArrayList<>(sorted);
     }
 
     public final Iterator<CommandNode> commandsIterator()

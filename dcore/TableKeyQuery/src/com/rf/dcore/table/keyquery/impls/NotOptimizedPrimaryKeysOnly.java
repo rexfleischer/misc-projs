@@ -6,9 +6,11 @@ import com.rf.dcore.table.keyquery.KeyQueryAlgorithm;
 import com.rf.dcore.table.keyquery.exceptions.IllegalOperationException;
 import com.rf.dcore.table.keyquery.exceptions.IndexerNotFoundException;
 import com.rf.dcore.table.query.commands.ComparatorCommand;
+import com.rf.dcore.table.query.commands.KeySetCommand;
 import com.rf.dcore.table.query.logictree.CommandNode;
 import com.rf.dcore.util.locks.DataLock;
 import com.rf.dcore.util.record.IndexedRecord;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Map;
 
@@ -16,9 +18,8 @@ import java.util.Map;
  *
  * @author REx
  */
-public class PrimaryKeysOnly implements KeyQueryAlgorithm<int[]>
+public class NotOptimizedPrimaryKeysOnly implements KeyQueryAlgorithm<int[]>
 {
-
     @Override
     public int[] queryForKeys(
             CommandNode[] query, 
@@ -35,7 +36,7 @@ public class PrimaryKeysOnly implements KeyQueryAlgorithm<int[]>
             throws  IllegalOperationException,
                     IndexerNotFoundException
     {
-        LinkedList<Object> stack = new LinkedList<>();
+        LinkedList<IndexedRecord[]> stack = new LinkedList<>();
         for(CommandNode command : query)
         {
             if (command.isComparator())
@@ -52,27 +53,43 @@ public class PrimaryKeysOnly implements KeyQueryAlgorithm<int[]>
                 switch(comparator.operation)
                 {
                     case NotEqual:
-                        indexers.get(comparator.columnName).select_NotEqual(null, null);
+                        ArrayList<Long> value1 = (ArrayList<Long>)comparator.value;
+                        thisResult = indexers.get(comparator.columnName)
+                                .select_NotEqual(value1, null);
                         break;
                     case Equal:
-                        
+                        ArrayList<Long> value2 = (ArrayList<Long>)comparator.value;
+                        thisResult = indexers.get(comparator.columnName)
+                                .select_Equal(value2, null);
                         break;
                     case Range:
-                        
+                        Long[] value3 = (Long[])comparator.value;
+                        thisResult = indexers.get(comparator.columnName)
+                                .select_Range(value3[0], value3[1], null);
                         break;
                     case GreaterThan:
-                        
+                        Long value4 = (Long)comparator.value;
+                        thisResult = indexers.get(comparator.columnName)
+                                .select_GreaterThan(value4, null);
                         break;
                     case LessThan:
-                        
+                        Long value5 = (Long)comparator.value;
+                        thisResult = indexers.get(comparator.columnName)
+                                .select_LessThan(value5, null);
                         break;
                     default:
                         throw new IllegalOperationException("2");
                 }
+                stack.addFirst(thisResult);
             }
             else if (command.isKeySetOperation())
             {
+                KeySetCommand operator = command.getAsKeySetOperator();
+                IndexedRecord[] left    = stack.pollFirst();
+                IndexedRecord[] right   = stack.pollFirst();
                 
+                IndexedRecord[] result = operator.operation.exec(left, right);
+                stack.addFirst(result);
             }
             else
             {
@@ -80,7 +97,21 @@ public class PrimaryKeysOnly implements KeyQueryAlgorithm<int[]>
             }
         }
         
-        int[] result = null;
+        if (stack.size() != 1)
+        {
+            throw new IllegalOperationException("3");
+        }
+        
+        IndexedRecord[] finalRecords = stack.pollFirst();
+        
+        int count = finalRecords.length;
+        int[] result = new int[count];
+        
+        for(int i = 0; i < count; i++)
+        {
+            result[i] = finalRecords[i].key;
+        }
+        
         return result;
     }
 }

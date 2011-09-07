@@ -26,6 +26,6 @@ public class IndexedRecord implements Comparable<IndexedRecord>
     @Override
     public int compareTo(IndexedRecord o)
     {
-        return location - o.location;
+        return key - o.key;
     }
 }

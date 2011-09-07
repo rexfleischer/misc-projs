@@ -19,7 +19,8 @@ public class StartBot {
         {
             //GotBots.GALAXY_ONLINE_2.main();
             //GotBots.TEST_SCREEN_SHOT.main();
-            GotBots.TEST_SCREEN_SHOT_DELTA.main();
+            //GotBots.TEST_SCREEN_SHOT_DELTA.main();
+            GotBots.LIST_GALAXYONLINE_IMAGES.main();
         }
         catch(Exception ex)
         {

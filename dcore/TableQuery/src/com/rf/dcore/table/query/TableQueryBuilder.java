@@ -19,7 +19,7 @@ public class TableQueryBuilder
 
     public TableQueryBuilder()
     {
-        commands = new LinkedList<CommandNode>();
+        commands = new LinkedList<>();
     }
 
     public TableQuery getTableQuery()

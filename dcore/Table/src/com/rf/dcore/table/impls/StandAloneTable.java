@@ -15,7 +15,7 @@ import com.rf.dcore.table.query.TableQuery;
 import com.rf.dcore.table.exception.TableException;
 import com.rf.dcore.table.indexer.TableIndexer;
 import com.rf.dcore.table.indexer.TableIndexers;
-import com.rf.dcore.table.keyquery.impls.PrimaryKeysOnly;
+import com.rf.dcore.table.keyquery.impls.NotOptimizedPrimaryKeysOnly;
 import com.rf.dcore.util.FileSerializer;
 import java.io.File;
 import java.io.IOException;
@@ -332,7 +332,7 @@ public class StandAloneTable implements Table
     {
         try
         {
-            int[] keys = (new PrimaryKeysOnly())
+            int[] keys = (new NotOptimizedPrimaryKeysOnly())
                     .queryForKeys(query.commandsArray(), indexers); 
             
             int counter = 0;
@@ -414,7 +414,7 @@ public class StandAloneTable implements Table
     {
         try
         {
-            int[] keys = (new PrimaryKeysOnly()).queryForKeys(
+            int[] keys = (new NotOptimizedPrimaryKeysOnly()).queryForKeys(
                     query.commandsArray(), indexers); 
             
             if (keys.length == 0)
@@ -454,7 +454,7 @@ public class StandAloneTable implements Table
     {
         try
         {
-            int[] keys = (new PrimaryKeysOnly()).queryForKeys(
+            int[] keys = (new NotOptimizedPrimaryKeysOnly()).queryForKeys(
                     query.commandsArray(), indexers);
             
             String[] recordUpdates = (String[])data.keySet().toArray();

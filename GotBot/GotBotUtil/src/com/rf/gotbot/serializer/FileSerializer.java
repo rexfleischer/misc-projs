@@ -3,7 +3,7 @@
  * and open the template in the editor.
  */
 
-package com.rf.gotbot.image.serializer;
+package com.rf.gotbot.serializer;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
