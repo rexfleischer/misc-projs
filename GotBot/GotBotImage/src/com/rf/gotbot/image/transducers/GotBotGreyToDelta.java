@@ -5,26 +5,26 @@
 package com.rf.gotbot.image.transducers;
 
 import com.rf.gotbot.image.GotBotTransducer;
-import com.rf.gotbot.image.types.DeltaImage;
-import com.rf.gotbot.image.types.GreyScaleImage;
+import com.rf.gotbot.image.types.GotBotDelta;
+import com.rf.gotbot.image.types.GotBotGrey;
 
 /**
  *
  * @author REx
  */
 public class GotBotGreyToDelta implements 
-        GotBotTransducer<GreyScaleImage, DeltaImage>
+        GotBotTransducer<GotBotGrey, GotBotDelta>
 {
 
     @Override
-    public DeltaImage transduce(GreyScaleImage input) 
+    public GotBotDelta transduce(GotBotGrey input) 
     {
         int oWidth = input.getWidth();
         int oHeight = input.getHeight();
         short[] horizontal  = new short[oHeight * (oWidth - 1)];
         short[] vertical    = new short[(oHeight - 1) * oWidth];
         
-        // do this manually...
+        // do this manually for random access...
         short[] temp = new short[oWidth * oHeight];
         for(int y = 0; y < oHeight; y++)
         {
@@ -76,7 +76,7 @@ public class GotBotGreyToDelta implements
             }
         }
         
-        DeltaImage result = new DeltaImage();
+        GotBotDelta result = new GotBotDelta();
         result.init(oWidth, oHeight, new short[][]{horizontal, vertical});
         return result;
     }

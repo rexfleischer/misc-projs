@@ -5,93 +5,48 @@
 package com.rf.gotbot.galaxyonline;
 
 import com.rf.gotbot.gameplay.GameBot;
-import com.rf.gotbot.input.ImageCheckAlgorithm;
-import com.rf.gotbot.input.ImageCheckAlgorithms;
-import com.rf.gotbot.input.ImageCheckConfig;
-import com.rf.gotbot.image.transducers.RGBBufferedImageToGotBotGrey;
-import com.rf.gotbot.output.SystemOutput;
+import com.rf.gotbot.image.GotBotImage;
+import com.rf.gotbot.input.util.ImageMapToAccelerationImageMap;
+import com.rf.gotbot.image.types.GotBotDeviation;
+import com.rf.gotbot.input.algorithm.AccelerationComparator;
 import java.awt.AWTException;
 import java.awt.Rectangle;
-import java.awt.Robot;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
-import javax.imageio.ImageIO;
 
 /**
  *
  * @author REx
  */
-public class GalaxyOnlineController implements GameBot
+public class GalaxyOnlineController extends GameBot
 {
-    private ImageCheckAlgorithm checker;
-    
-    private SystemOutput output;
-    
-    private Robot robot;
+    private AccelerationComparator checker;
     
     private String workingDir;
     
     public GalaxyOnlineController(String workingDir)
             throws AWTException, IOException
     {
-        this(workingDir, 60, 4, 5);
+        this(workingDir, 60);
     }
     
-    public GalaxyOnlineController(
-            String workingDir,
-            int pauseMilli,
-            int maxPixelsInError,
-            int maxPixelDiffForError) 
+    public GalaxyOnlineController(String workingDir, int pauseMilli) 
             throws AWTException, IOException
     {
+        super(pauseMilli);
+        
         this.workingDir = workingDir;
-        robot = new Robot();
-        output = new SystemOutput(robot, pauseMilli);
+        checker = new AccelerationComparator(robot);
         
-        checker = ImageCheckAlgorithms.BASIC_ERROR_COUNT.get(robot);
-        checker.setConfig(ImageCheckConfig.MAX_PIXELS_IN_ERROR, maxPixelsInError);
-        checker.setConfig(ImageCheckConfig.MAX_PIXEL_DIFF_FOR_ERROR, maxPixelDiffForError);
+        Map<String, GotBotImage> images = (new GalaxyOnlineLoadImageGreys())
+                .loadDirectory(this.workingDir);
         
-        for(GalaxyOnlineImage image : GalaxyOnlineImage.values())
-        {
-            putHelper(image);
-        }
+        Map<String, GotBotDeviation> deltaImages = 
+                (new ImageMapToAccelerationImageMap()).transduce(images);
         
-        checker.setConfig(
-                ImageCheckConfig.REQUIRED_IMAGE_LIST, 
-                new String[]{
-                    GalaxyOnlineImage.CHECK_CLOCK.name(),
-                    GalaxyOnlineImage.CHECK_CLOCK_DARK.name(),
-                    GalaxyOnlineImage.CHECK_EMPTYFACE.name(),
-                    GalaxyOnlineImage.CHECK_EMPTYFACE_DARK.name()
-                });
-    }
-    
-    private void putHelper(GalaxyOnlineImage putting) throws IOException
-    {
-        RGBBufferedImageToGotBotGrey transducer = 
-                new RGBBufferedImageToGotBotGrey();
-        String[] images = putting.getImages();
-        for(String image : images)
-        {
-            checker.setImage(
-                    putting.name(), 
-                    transducer.transduce(
-                        ImageIO.read(new File(workingDir + "/" + image + ".png")))
-                    .toBufferedImage());
-        }
-        
-        boolean[] ignores = putting.getIgnores();
-        if (ignores != null)
-        {
-            checker.setImageConfig(
-                    putting.name(),
-                    ImageCheckConfig.PIXELS_TO_IGNORE,
-                    ignores);
-        }
+        checker.setImages(deltaImages);
     }
     
     @Override
@@ -165,101 +120,74 @@ public class GalaxyOnlineController implements GameBot
     }
     
     //<editor-fold defaultstate="collapsed" desc="iterative helpers">
-    private Map<String, ArrayList<Rectangle>> getState(GalaxyOnlineImage[] imageCheck)
+    public Map<String, ArrayList<Rectangle>> getState(String[] imageCheck)
     {
         checker.initNewScreen();
-        
-        Map<String, ArrayList<Rectangle>> state = null;
+        ArrayList<String> checking = new ArrayList<>(
+                imageCheck == null ? 2 : imageCheck.length + 2);
         if (imageCheck != null)
         {
-            String[] imagesToCheck = new String[imageCheck.length];
-            for(int i = 0; i < imageCheck.length; i++)
-            {
-                imagesToCheck[i] = imageCheck[i].name();
-            }
-            state = checker.getImages(imagesToCheck);
-        }
-        else
-        {
-            state = checker.getImages(new String[]{});
+            checking.addAll(Arrays.asList(imageCheck));
         }
         
-        if ((state.containsKey(GalaxyOnlineImage.CHECK_CLOCK.name()) &&
-             state.containsKey(GalaxyOnlineImage.CHECK_EMPTYFACE.name())) 
-                ||
-            (state.containsKey(GalaxyOnlineImage.CHECK_CLOCK_DARK.name()) &&
-             state.containsKey(GalaxyOnlineImage.CHECK_EMPTYFACE_DARK.name())))
+        if (!checking.contains(GO2Images.CHECK.BOTTOM))
+        {
+            checking.add(GO2Images.CHECK.BOTTOM);
+        }
+        if (!checking.contains(GO2Images.CHECK.EMPTYFACE))
+        {
+            checking.add(GO2Images.CHECK.EMPTYFACE);
+        }
+        
+        String[] checkPush = new String[checking.size()];
+        checkPush = checking.toArray(checkPush);
+        
+        Map<String, ArrayList<Rectangle>> state = checker.getImages(checkPush);
+        checker.finished();
+        if (state.containsKey(GO2Images.CHECK.BOTTOM) &&
+                state.containsKey(GO2Images.CHECK.EMPTYFACE))
         {
             return state;
         }
-        System.out.println(state);
+        System.err.println(state);
         throw new IllegalStateException(
                 "the required images are not found");
     }
     
-    private boolean goToGameState(GalaxyOnlineImage goToState)
-    {
-        robot.delay(600);
-        GalaxyOnlineImage[] theseImages = new GalaxyOnlineImage[]{
-            GalaxyOnlineImage.EXIT_WINDOW, goToState};
-        
-        Map<String, ArrayList<Rectangle>> state = getState(theseImages);
-
-        while(state.containsKey(GalaxyOnlineImage.EXIT_WINDOW.name()))
-        {
-            output.leftClick(state.get(GalaxyOnlineImage.EXIT_WINDOW.name()).get(0));
-            robot.delay(600);
-            state = getState(theseImages);
-        }
-        output.leftClick(state.get(goToState.name()).get(0));
-
-        Rectangle rect = null;
-        if (state.containsKey(GalaxyOnlineImage.CHECK_EMPTYFACE.name()))
-        {
-            rect = state.get(GalaxyOnlineImage.CHECK_EMPTYFACE.name()).get(0);
-        }
-        else if(state.containsKey(GalaxyOnlineImage.CHECK_EMPTYFACE_DARK.name()))
-        {
-            rect = state.get(GalaxyOnlineImage.CHECK_EMPTYFACE_DARK.name()).get(0);
-        }
-        else
-        {
-            throw new IllegalStateException("no emptyface found");
-        }
-        rect.y += 100;
-        output.targetOnMouse(rect);
-        
-        return true;
-    }
-    
-    private void doImageString(GalaxyOnlineImage[] theseImages)
-    {
-        for(GalaxyOnlineImage image : theseImages)
-        {
-            Map<String, ArrayList<Rectangle>> state = getState(new GalaxyOnlineImage[]{image});
-            if (!state.containsKey(image.name()))
-            {
-                throw new IllegalArgumentException("image does not exist: " + image.name());
-            }
-            output.leftClick(state.get(image.name()).get(0));
-        }
-    }
-    
-    private void doFirstImage(GalaxyOnlineImage[] theseImages)
-    {
-        Map<String, ArrayList<Rectangle>> state = getState(theseImages);
-        for(GalaxyOnlineImage image : theseImages)
-        {
-            if (state.containsKey(image.name()))
-            {
-                output.leftClick(state.get(image.name()).get(0));
-                return;
-            }
-        }
-        throw new IllegalArgumentException(
-                "none of the asked images found: "
-                + Arrays.toString(theseImages));
-    }
+//    private boolean goToGameState(GalaxyOnlineImage goToState)
+//    {
+//        robot.delay(600);
+//        GalaxyOnlineImage[] theseImages = new GalaxyOnlineImage[]{
+//            GalaxyOnlineImage.EXIT_WINDOW, goToState};
+//        
+//        Map<String, ArrayList<Rectangle>> state = getState(theseImages);
+//
+//        while(state.containsKey(GalaxyOnlineImage.EXIT_WINDOW.name()))
+//        {
+//            output.leftClick(state.get(GalaxyOnlineImage.EXIT_WINDOW.name()).get(0));
+//            robot.delay(600);
+//            state = getState(theseImages);
+//        }
+//        output.leftClick(state.get(goToState.name()).get(0));
+//
+//        Rectangle rect = null;
+//        if (state.containsKey(GalaxyOnlineImage.CHECK_EMPTYFACE.name()))
+//        {
+//            rect = state.get(GalaxyOnlineImage.CHECK_EMPTYFACE.name()).get(0);
+//        }
+//        else if(state.containsKey(GalaxyOnlineImage.CHECK_EMPTYFACE_DARK.name()))
+//        {
+//            rect = state.get(GalaxyOnlineImage.CHECK_EMPTYFACE_DARK.name()).get(0);
+//        }
+//        else
+//        {
+//            throw new IllegalStateException("no emptyface found");
+//        }
+//        rect.y += 100;
+//        output.targetOnMouse(rect);
+//        
+//        return true;
+//    }
     //</editor-fold>
     
     
@@ -404,89 +332,68 @@ public class GalaxyOnlineController implements GameBot
     //<editor-fold defaultstate="collapsed" desc="tests">
     private void testInstances()
     {
-        goToGameState(GalaxyOnlineImage.MENU_SPACEBASE);
-        doImageString(new GalaxyOnlineImage[]{
-            GalaxyOnlineImage.SPACE_STATION,
-            GalaxyOnlineImage.SPACE_STATION_INSTANCE,
-            GalaxyOnlineImage.INSTANCE_01,
-            GalaxyOnlineImage.INSTANCE_02,
-            GalaxyOnlineImage.INSTANCE_03,
-            GalaxyOnlineImage.INSTANCE_04,
-            GalaxyOnlineImage.INSTANCE_05,
-            GalaxyOnlineImage.INSTANCE_06,
-            GalaxyOnlineImage.EXIT_WINDOW
-        });
+//        goToGameState(GalaxyOnlineImage.MENU_SPACEBASE);
+//        doImageString(new GalaxyOnlineImage[]{
+//            GalaxyOnlineImage.SPACE_STATION,
+//            GalaxyOnlineImage.SPACE_STATION_INSTANCE,
+//            GalaxyOnlineImage.INSTANCE_01,
+//            GalaxyOnlineImage.INSTANCE_02,
+//            GalaxyOnlineImage.INSTANCE_03,
+//            GalaxyOnlineImage.INSTANCE_04,
+//            GalaxyOnlineImage.INSTANCE_05,
+//            GalaxyOnlineImage.INSTANCE_06,
+//            GalaxyOnlineImage.EXIT_WINDOW
+//        });
     }
     
     private void testMenus()
     {
-        goToGameState(GalaxyOnlineImage.MENU_SPACEBASE);
-        doImageString(new GalaxyOnlineImage[]{
-            GalaxyOnlineImage.MENU_BUILD,
-            GalaxyOnlineImage.MENU_BUILD_BLUEPRINT,});
-        robot.delay(600);
-        doFirstImage(new GalaxyOnlineImage[]{
-            GalaxyOnlineImage.EXIT_WINDOW,
-            GalaxyOnlineImage.MENU_CANCEL});
-        robot.delay(600);
-        doImageString(new GalaxyOnlineImage[]{
-            GalaxyOnlineImage.MENU_BUILD,
-            GalaxyOnlineImage.MENU_BUILD_CONSTRUCT});
-        robot.delay(600);
-        doFirstImage(new GalaxyOnlineImage[]{
-            GalaxyOnlineImage.EXIT_WINDOW,
-            GalaxyOnlineImage.MENU_CANCEL});
-        robot.delay(600);
-        doImageString(new GalaxyOnlineImage[]{
-            GalaxyOnlineImage.MENU_BUILD,
-            GalaxyOnlineImage.MENU_BUILD_RESEARCH});
-        robot.delay(600);
-        doFirstImage(new GalaxyOnlineImage[]{
-            GalaxyOnlineImage.EXIT_WINDOW,
-            GalaxyOnlineImage.MENU_CANCEL});
-        robot.delay(600);
-        doImageString(new GalaxyOnlineImage[]{
-            GalaxyOnlineImage.MENU_BUILD,
-            GalaxyOnlineImage.MENU_BUILD_WARSHIP});
-        robot.delay(600);
-        doFirstImage(new GalaxyOnlineImage[]{
-            GalaxyOnlineImage.EXIT_WINDOW,
-            GalaxyOnlineImage.MENU_CANCEL});
+        Map<String, ArrayList<Rectangle>> state =  getState(new String[]{
+            GO2Images.MENU.BUILD,
+            GO2Images.MENU.GROUNDBASE,
+            GO2Images.MENU.MILITARY,
+            GO2Images.MENU.MYTOOLS,
+            GO2Images.MENU.SOCIAL,
+            GO2Images.MENU.SPACEBASE
+        });
+        
+        if (!state.containsKey(GO2Images.MENU.BUILD) ||
+            !state.containsKey(GO2Images.MENU.GROUNDBASE) ||
+            !state.containsKey(GO2Images.MENU.MILITARY) ||
+            !state.containsKey(GO2Images.MENU.MYTOOLS) ||
+            !state.containsKey(GO2Images.MENU.SOCIAL) ||
+            !state.containsKey(GO2Images.MENU.SPACEBASE))
+        {
+            System.err.println(state);
+            throw new IllegalStateException("required state not found");
+        }
+        
+        output.leftClick(state.get(GO2Images.MENU.BUILD).get(0));
+        this.doImageString(
+                new String[]{
+                    GO2Images.MENU.BUILD_.BLUEPRINT,
+                    GO2Images.MENU.BUILD_.BUILDING,
+                    GO2Images.MENU.BUILD_.RESEARCH,
+                    GO2Images.MENU.BUILD_.WARSHIP
+                }, 
+                false,
+                false);
         robot.delay(600);
         
-        
-        // second menu
-        doImageString(new GalaxyOnlineImage[]{
-            GalaxyOnlineImage.MENU_MILITARY,
-            GalaxyOnlineImage.MENU_MILITARY_BUILDFLEET});
-        robot.delay(600);
-        doFirstImage(new GalaxyOnlineImage[]{
-            GalaxyOnlineImage.EXIT_WINDOW,
-            GalaxyOnlineImage.MENU_CANCEL});
-        robot.delay(600);
-        doImageString(new GalaxyOnlineImage[]{
-            GalaxyOnlineImage.MENU_MILITARY,
-            GalaxyOnlineImage.MENU_MILITARY_COMMANDER});
-        robot.delay(600);
-        doFirstImage(new GalaxyOnlineImage[]{
-            GalaxyOnlineImage.EXIT_WINDOW,
-            GalaxyOnlineImage.MENU_CANCEL});
-        robot.delay(600);
-        doImageString(new GalaxyOnlineImage[]{
-            GalaxyOnlineImage.MENU_MILITARY,
-            GalaxyOnlineImage.MENU_MILITARY_DESIGNSHIP});
-        robot.delay(600);
-        doFirstImage(new GalaxyOnlineImage[]{
-            GalaxyOnlineImage.EXIT_WINDOW,
-            GalaxyOnlineImage.MENU_CANCEL});
-        robot.delay(600);
-        doImageString(new GalaxyOnlineImage[]{
-            GalaxyOnlineImage.MENU_MILITARY,
-            GalaxyOnlineImage.MENU_MILITARY_SUPPLYFLEET});
-        robot.delay(600);
-        doFirstImage(new GalaxyOnlineImage[]{
-            GalaxyOnlineImage.EXIT_WINDOW,
-            GalaxyOnlineImage.MENU_CANCEL});
+//        output.targetOnMouse(state.get(GO2Images.MENU.GROUNDBASE).get(0));
+//        robot.delay(600);
+//        
+//        output.targetOnMouse(state.get(GO2Images.MENU.MILITARY).get(0));
+//        robot.delay(600);
+//        
+//        output.targetOnMouse(state.get(GO2Images.MENU.MYTOOLS).get(0));
+//        robot.delay(600);
+//        
+//        output.targetOnMouse(state.get(GO2Images.MENU.SOCIAL).get(0));
+//        robot.delay(600);
+//        
+//        output.targetOnMouse(state.get(GO2Images.MENU.SPACEBASE).get(0));
+//        robot.delay(600);
     }
     //</editor-fold>
     

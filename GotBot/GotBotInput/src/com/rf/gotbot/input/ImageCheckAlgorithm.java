@@ -4,10 +4,7 @@
  */
 package com.rf.gotbot.input;
 
-import com.rf.gotbot.input.util.ScreenShot;
 import java.awt.Rectangle;
-import java.awt.Robot;
-import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -15,38 +12,17 @@ import java.util.Map;
  *
  * @author REx
  */
-public abstract class ImageCheckAlgorithm 
+public interface ImageCheckAlgorithm<_Iy>
 {
-    protected BufferedImage screen;
+    public abstract void initNewScreen();
     
-    protected Robot robot;
+    public abstract void finished();
     
-    public ImageCheckAlgorithm(Robot robot)
-    {
-        this.robot = robot;
-        this.screen = null;
-    }
+    public abstract void setImages(Map<String, _Iy> images);
     
-    public void initNewScreen()
-    {
-        screen = ScreenShot.shoot(robot);
-        initNewScreenCallback();
-    }
+    public abstract void setConfig(String config, Object value);
     
-    public void finished()
-    {
-        screen = null;
-    }
-    
-    protected abstract void initNewScreenCallback();
-    
-    public abstract void setConfig(ImageCheckConfig config, Object value);
-    
-    public abstract void setImage(String key, BufferedImage image);
-    
-    public abstract void setImages(String key, ArrayList<BufferedImage> images);
-    
-    public abstract void setImageConfig(String imageKey, ImageCheckConfig config, Object value);
+    public abstract void setImageConfig(String imageKey, String config, Object value);
     
     public abstract Map<String, ArrayList<Rectangle>> getImages(String[] key);
 }

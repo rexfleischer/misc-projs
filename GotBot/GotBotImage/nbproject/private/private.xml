@@ -2,7 +2,8 @@
 <project-private xmlns="http://www.netbeans.org/ns/project-private/1">
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/1"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/1">
-        <file>file:/C:/Users/REx/Desktop/misc-proj/GotBot/GotBotImage/src/com/rf/gotbot/image/types/DeltaImage.java</file>
-        <file>file:/C:/Users/REx/Desktop/misc-proj/GotBot/GotBotImage/src/com/rf/gotbot/image/transducers/GotBotGreyToDelta.java</file>
+        <file>file:/C:/Users/REx/Desktop/misc-proj/GotBot/GotBotImage/src/com/rf/gotbot/image/types/GotBotGrey.java</file>
+        <file>file:/C:/Users/REx/Desktop/misc-proj/GotBot/GotBotImage/src/com/rf/gotbot/image/types/GotBotDeviation.java</file>
+        <file>file:/C:/Users/REx/Desktop/misc-proj/GotBot/GotBotImage/src/com/rf/gotbot/image/transducers/GotBotGreyToRangedGrey.java</file>
     </open-files>
 </project-private>

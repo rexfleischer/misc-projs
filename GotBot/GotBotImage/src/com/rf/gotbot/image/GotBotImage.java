@@ -11,11 +11,11 @@ import java.io.Serializable;
  *
  * @author REx
  */
-public interface GotBotImage<_Ty> extends Serializable
+public interface GotBotImage extends Serializable
 {
-    public void init(int width, int height, _Ty init);
+    public void init(int width, int height, Object init);
     
-    public _Ty getRaw();
+    public Object getRaw();
     
     public int getWidth();
     

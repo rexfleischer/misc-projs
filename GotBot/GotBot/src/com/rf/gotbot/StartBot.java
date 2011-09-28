@@ -20,12 +20,21 @@ public class StartBot {
             //GotBots.GALAXY_ONLINE_2.main();
             //GotBots.TEST_SCREEN_SHOT.main();
             //GotBots.TEST_SCREEN_SHOT_DELTA.main();
-            GotBots.LIST_GALAXYONLINE_IMAGES.main();
+            //GotBots.LIST_GALAXYONLINE_IMAGES.main();
+            GotBots.TEST.main();
         }
         catch(Exception ex)
         {
-            System.err.println(
-                    "an error occurred out of main: " + ex.getMessage());
+            ex.printStackTrace();
+            Throwable cause = ex.getCause();
+            while(cause != null)
+            {
+                cause.printStackTrace();
+                cause = cause.getCause();
+            }
+            
+//            System.err.println(
+//                    "an error occurred out of main: " + ex);
         }
     }
 }

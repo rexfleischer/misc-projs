@@ -63,7 +63,7 @@ public abstract class LoadImagesByDirectory<_Fy>
         return result;
     }
     
-    private String basename(File file)
+    public static String basename(File file)
     {
         String search = file.getName();
         int pos = search.lastIndexOf(".");

@@ -83,7 +83,7 @@ public enum GalaxyOnlineCommand implements CommandCycle
         @Override
         public CommandCycle onFail()
         {
-            return null;
+            return DO_TEST_MENUS;
         }
 
         @Override

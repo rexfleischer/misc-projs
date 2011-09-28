@@ -5,7 +5,7 @@
 package com.rf.gotbot.image.transducers;
 
 import com.rf.gotbot.image.GotBotTransducer;
-import com.rf.gotbot.image.types.GreyScaleImage;
+import com.rf.gotbot.image.types.GotBotGrey;
 import java.awt.image.BufferedImage;
 
 /**
@@ -13,11 +13,11 @@ import java.awt.image.BufferedImage;
  * @author REx
  */
 public class RGBBufferedImageToGotBotGrey implements 
-        GotBotTransducer<BufferedImage, GreyScaleImage>
+        GotBotTransducer<BufferedImage, GotBotGrey>
 {
 
     @Override
-    public GreyScaleImage transduce(BufferedImage input) 
+    public GotBotGrey transduce(BufferedImage input) 
     {
         byte[] data = new byte[input.getWidth() * input.getHeight()];
         int counter = 0;
@@ -34,7 +34,7 @@ public class RGBBufferedImageToGotBotGrey implements
             }
         }
         
-        GreyScaleImage result = new GreyScaleImage();
+        GotBotGrey result = new GotBotGrey();
         result.init(input.getWidth(), input.getHeight(), data);
         return result;
     }
