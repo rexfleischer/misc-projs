@@ -5,8 +5,8 @@
 package com.rf.fled.config;
 
 import com.rf.fled.language.LanguageStatements;
-import com.rf.fled.engine.DataCoreEngine;
-import com.rf.fled.engine.DataCoreExtension;
+import com.rf.fled.engine.FledEngine;
+import com.rf.fled.engine.FledExtension;
 import com.rf.fled.exceptions.FledException;
 import com.rf.fled.util.FileSerializer;
 import com.rf.fled.util.MultitonFactory;
@@ -20,9 +20,9 @@ public class ConfigFileFactory extends MultitonFactory<ConfigFile>
 {
     private String createNameFromContext(String context)
     {
-        return DataCoreEngine.get().configDirectory()
+        return FledEngine.get().configDirectory()
                 + "/" + context
-                + "." + DataCoreExtension.CONFIG;
+                + "." + FledExtension.CONFIG;
     }
     
     @Override
@@ -61,7 +61,7 @@ public class ConfigFileFactory extends MultitonFactory<ConfigFile>
     {
         try
         {
-            return (ConfigFile) FileSerializer.unserialize(
+            return (ConfigFile) FileSerializer.deserialize(
                     createNameFromContext(context));
         }
         catch(Exception ex)

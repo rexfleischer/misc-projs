@@ -4,8 +4,8 @@
  */
 package com.rf.fled.exceptions;
 
-import com.rf.fled.engine.DataCoreEngine;
 import com.rf.fled.language.LanguageStatements;
+import com.rf.fled.language.Languages;
 
 /**
  *
@@ -20,11 +20,11 @@ public class FledException extends Exception
     
     public FledException(LanguageStatements statement)
     {
-        super(DataCoreEngine.get().languageInterpret(statement));
+        super(Languages.sts(statement));
     }
 
     public FledException(LanguageStatements statement, Throwable cause) 
     {
-        super(DataCoreEngine.get().languageInterpret(statement), cause);
+        super(Languages.sts(statement), cause);
     }
 }

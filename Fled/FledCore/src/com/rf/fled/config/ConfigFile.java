@@ -10,7 +10,7 @@ import java.util.Map;
  *
  * @author REx
  */
-public class ConfigFile implements Configurable, Serializable
+public class ConfigFile implements Configurable<String>, Serializable
 {
     private String context;
     

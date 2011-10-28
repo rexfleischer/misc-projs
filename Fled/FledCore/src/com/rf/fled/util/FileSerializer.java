@@ -36,7 +36,7 @@ public class FileSerializer
         }   
     }
 
-    public static Object unserialize(String filename)
+    public static Object deserialize(String filename)
             throws  FileNotFoundException,
                     IOException,
                     ClassNotFoundException

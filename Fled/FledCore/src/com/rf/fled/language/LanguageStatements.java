@@ -17,4 +17,5 @@ public enum LanguageStatements
     CONTEXT_DOES_NOT_EXISTS,
     CONTEXT_ALREADY_EXISTS,
     INVALID_LOCK_TYPE,
+    INVALID_LOCK_KEY,
 }
