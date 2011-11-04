@@ -13,10 +13,14 @@ import com.rf.fled.util.Pair;
  */
 public interface Presistance
 {
-    public long insert(Object record)
-            throws FledPresistanceException;
-    
-    public void update(long id, Object record)
+    /**
+     * does an insert at a specific id
+     * @param id the id to insert
+     * @param record the object that is going to be inserted
+     * @return the old object, if any
+     * @throws FledPresistanceException 
+     */
+    public Object insert(long id, Object record)
             throws FledPresistanceException;
     
     public void delete(long id)
@@ -26,6 +30,9 @@ public interface Presistance
             throws FledPresistanceException;
     
     public Browser<Pair<Long, Object>> browse(long id)
+            throws FledPresistanceException;
+    
+    public Browser<Pair<Long, Object>> browse()
             throws FledPresistanceException;
     
     public void beginTransaction()

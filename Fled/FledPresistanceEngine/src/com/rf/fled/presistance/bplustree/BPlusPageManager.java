@@ -6,7 +6,11 @@ package com.rf.fled.presistance.bplustree;
 
 import com.rf.fled.exceptions.FledPresistanceException;
 import com.rf.fled.language.LanguageStatements;
+import java.io.Externalizable;
 import java.io.File;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.Map;
@@ -15,7 +19,7 @@ import java.util.Map;
  *
  * @author REx
  */
-public class BPlusPageManager
+public class BPlusPageManager implements Externalizable
 {
     private final Object LOCK;
     
@@ -26,8 +30,13 @@ public class BPlusPageManager
     public BPlusPageManager(String workingDir)
     {
         this.workingDir = workingDir;
-        openPages = new HashMap<Long, WeakReference<BPlusPage>>();
-        LOCK = new Object();
+        this.openPages  = new HashMap<Long, WeakReference<BPlusPage>>();
+        this.LOCK       = new Object();
+    }
+    
+    public void savePage(BPlusPage page)
+    {
+        
     }
     
     public BPlusPage getPage(long id)
@@ -56,17 +65,7 @@ public class BPlusPageManager
         return result;
     }
     
-    public BPlusPage createPage()
-    {
-        return null;
-    }
-    
     public void deletePage(long id)
-    {
-        
-    }
-    
-    public void closeFile(BPlusPage page)
     {
         
     }
@@ -75,4 +74,19 @@ public class BPlusPageManager
     {
         return null;
     }
+
+    @Override
+    public void readExternal(ObjectInput in) 
+            throws  IOException, 
+                    ClassNotFoundException 
+    {
+        
+    }
+
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+    
+    
 }

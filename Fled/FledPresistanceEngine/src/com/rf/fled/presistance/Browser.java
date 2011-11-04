@@ -12,10 +12,13 @@ import com.rf.fled.exceptions.FledPresistanceException;
  */
 public interface Browser<_Ty> 
 {
-    public boolean prev(_Ty obj)
+    public boolean valid()
             throws FledPresistanceException;
     
     public boolean curr(_Ty obj)
+            throws FledPresistanceException;
+    
+    public boolean prev(_Ty obj)
             throws FledPresistanceException;
     
     public boolean next(_Ty obj)

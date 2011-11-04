@@ -45,6 +45,12 @@ public class BPlusBrowser implements Browser<Pair<Long, Object>>
         this.pageManager = pageManager;
         this.index = index;
     }
+    
+    @Override
+    public boolean valid()
+    {
+        return page.indexInRange(index);
+    }
 
     @Override
     public boolean curr(Pair<Long, Object> pair) 
@@ -54,8 +60,11 @@ public class BPlusBrowser implements Browser<Pair<Long, Object>>
         // is a valid one. 
         if (page.indexInRange(index))
         {
-            pair.setLeft(page.getKey(index));
-            pair.setRight(page.getValue(index));
+            if (pair != null)
+            {
+                pair.setLeft(page.getKey(index));
+                pair.setRight(page.getValue(index));
+            }
             return true;
         }
         return false;
