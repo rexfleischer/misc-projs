@@ -36,13 +36,6 @@ public class BPlusPage implements Externalizable
     public boolean isLeaf() { return isLeaf; }
     
     /**
-     * every file has a parent except the root. that has an id of -1
-     */
-    private long parentId;
-    public long getParentBucketId() { return parentId; }
-    public void setParentBucketId(long id) { parentId = id; }
-    
-    /**
      * sense this is a bplustree, then at the leaf nodes there are next
      * and previous pages for browsing and such.
      * 
@@ -96,7 +89,6 @@ public class BPlusPage implements Externalizable
         keys        = new long[treeManager.getRecordsPerPage()];
         nextId      = 0;
         prevId      = 0;
-        parentId    = 0;
         this.thisId = treeManager.incrementPageCount();
         
         if (isLeaf)
@@ -127,8 +119,26 @@ public class BPlusPage implements Externalizable
         keys            = new long[treeManager.getRecordsPerPage()];
         values          = new Object[treeManager.getRecordsPerPage()];
         childrenPages   = null; // not used if leaf
+    }
+    
+    public BPlusPage(
+            BPlusTree treeManager, 
+            BPlusPage rootPage, 
+            BPlusPage flowPage)
+    {
+        this.isLeaf = true;
+        this.treeManager = treeManager;
+        this.thisId = treeManager.incrementPageCount();
         
+        keysUsed = 1;
+        keys            = new long[treeManager.getRecordsPerPage()];
+        values          = null;
+        childrenPages   = new long[treeManager.getRecordsPerPage()];
         
+        keys[0] = rootPage.getKey(0);
+        keys[1] = flowPage.getKey(0);
+        childrenPages[0] = rootPage.getThisBuckedId();
+        childrenPages[1] = flowPage.getThisBuckedId();
     }
     
     /**
@@ -292,28 +302,65 @@ public class BPlusPage implements Externalizable
         // going there.. but if its in the upper half, then its going there
         if (index < halfPageSize)
         {
+            // we need to move the entries (plus the new one) to the overflow
+            // page. to do this we need to look at how we are going to do this:
+            // 
+            // with 10 entries, plus the new one, the transform is as such
+            // this page before:    ||||||||||
+            // now, this is-->
+            // this page after:     |||N||----
+            // overflow page:       |||||-----
+            //
+            // the algorithm works for child and enteries
             if (isLeaf)
             {
-                
+                copyEntries(halfPageSize, newPage, 0, halfPageSize);
+                nullEntries(halfPageSize, halfPageSize);
+                insertEntry(key, data, index);
             }
             else
             {
-                
+                copyChildren(halfPageSize, newPage, 0, halfPageSize);
+                nullChildren(halfPageSize, halfPageSize);
+                insertChild(key, overFlowId, index);
             }
         }
         else
         {
-            if (isLeaf)
+            if (isLeaf) 
             {
-                
+                copyEntries(halfPageSize, newPage, 0, halfPageSize);
+                nullEntries(halfPageSize, halfPageSize);
+                newPage.insertEntry(key, data, index);
             }
-            else
+            else 
             {
-                
+                copyChildren(halfPageSize, newPage, 0, halfPageSize);
+                nullChildren(halfPageSize, halfPageSize);
+                newPage.insertChild(key, overFlowId, index);
             }
         }
         
-        return null;
+        if (isLeaf)
+        {
+            newPage.setPreviousBucketId(thisId);
+            if (nextId != 0)
+            {
+                BPlusPage nextPage = treeManager.getPageManager().getPage(nextId);
+                nextPage.setPreviousBucketId(newPage.getThisBuckedId());
+                newPage.setNextBucketId(nextPage.getThisBuckedId());
+                treeManager.getPageManager().savePage(nextPage);
+            }
+        }
+        
+        setNextBucketId(newPage.getThisBuckedId());
+        newPage.setPreviousBucketId(getThisBuckedId());
+        
+        treeManager.getPageManager().savePage(this);
+        treeManager.getPageManager().savePage(newPage);
+        
+        result.overflowPage = newPage;
+        return result;
     }
     
     /**
@@ -381,7 +428,32 @@ public class BPlusPage implements Externalizable
         childrenPages[insertIndex] = value;
     }
     
-    private void copyEntries(int index, BPlusTree dest, int destIndex, int count)
+    private void copyEntries(int index, BPlusPage dest, int destIndex, int count)
+    {
+        
+    }
+    
+    private void copyChildren(int index, BPlusPage dest, int destIndex, int count)
+    {
+        
+    }
+    
+    public void setChild(int index, long key, long childId)
+    {
+        
+    }
+    
+    public void setEntry(int index, long key, Object value)
+    {
+        
+    }
+    
+    public void nullEntries(int start, int count)
+    {
+        
+    }
+    
+    public void nullChildren(int start, int count)
     {
         
     }

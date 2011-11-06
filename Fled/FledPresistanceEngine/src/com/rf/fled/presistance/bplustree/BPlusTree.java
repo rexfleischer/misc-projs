@@ -5,17 +5,18 @@
 package com.rf.fled.presistance.bplustree;
 
 import com.rf.fled.exceptions.FledPresistanceException;
+import com.rf.fled.language.LanguageStatements;
 import com.rf.fled.presistance.Browser;
 import com.rf.fled.presistance.Presistance;
 import com.rf.fled.presistance.Serializer;
+import com.rf.fled.util.FileSerializer;
 import com.rf.fled.util.Pair;
-import java.nio.ByteBuffer;
 
 /**
  *
  * @author REx
  */
-public class BPlusTree implements Presistance, Serializer
+public class BPlusTree implements Presistance
 {
     /**
      * the manager of all of the pages on the file system
@@ -35,20 +36,9 @@ public class BPlusTree implements Presistance, Serializer
     private int order;
     
     /**
-     * this keeps track of the BPlusPage ids
-     */
-    private long pageCountAt;
-    public long incrementPageCount(){ pageCountAt++; return pageCountAt; }
-    
-    /**
      * total number of records in the tree
      */
     private int recordCount;
-    
-    /**
-     * the serializer for bring object into and out of a ByteBuffer
-     */
-    private Serializer serializer;
     
     /**
      * this is the number of records per page that are allowed. this
@@ -56,6 +46,17 @@ public class BPlusTree implements Presistance, Serializer
      */
     private int recordsPerPage;
     public int getRecordsPerPage(){ return recordsPerPage; }
+    
+    /**
+     * this keeps track of the BPlusPage ids
+     */
+    private long pageCountAt;
+    public long incrementPageCount(){ pageCountAt++; return pageCountAt; }
+    
+    /**
+     * the serializer for bring object into and out of a ByteBuffer
+     */
+    private Serializer serializer;
 
     @Override
     public Object select(long id) 
@@ -119,37 +120,63 @@ public class BPlusTree implements Presistance, Serializer
     }
 
     @Override
-    public Object insert(long id, Object record)
+    public Object insert(long id, Object record, boolean replace)
             throws FledPresistanceException 
     {
-        if (record == null)
+        try
         {
-            throw new NullPointerException("record");
+            if (record == null)
+            {
+                throw new NullPointerException("record");
+            }
+
+            BPlusPage rootPage = getRootPage();
+
+            if (rootPage == null)
+            {
+                // this means the tree is empty and we are going 
+                // to do a first insert
+                BPlusPage newRoot = new BPlusPage(this, id, record);
+
+                // first record
+                recordCount = 1;
+
+                // save the file to file
+                pageManager.savePage(newRoot);
+
+                // no object was overridden
+                return null;
+            }
+            else
+            {
+                InsertResult result = rootPage.insert(id, record, replace);
+                boolean treeNeedsUpdate = false;
+                if (result.overflowPage != null)
+                {
+                    BPlusPage newRoot = new BPlusPage(this, rootPage, result.overflowPage);
+                    root = newRoot.getThisBuckedId();
+                    pageManager.savePage(newRoot);
+                    order++;
+                    treeNeedsUpdate = true;
+                }
+                if (result.existing == null)
+                {
+                    recordCount++;
+                    treeNeedsUpdate = true;
+                }
+
+                if (treeNeedsUpdate)
+                {
+                    FileSerializer.serialize(null, this);
+                }
+                return result.existing;
+            }
         }
-        
-        BPlusPage rootPage = getRootPage();
-        
-        if (rootPage == null)
+        catch(Exception ex)
         {
-            // this means the tree is empty and we are going 
-            // to do a first insert
-            BPlusPage newRoot = new BPlusPage(this, id, record);
-            
-            // first record
-            recordCount = 1;
-            
-            // save the file to file
-            pageManager.savePage(newRoot);
-            
-            // no object was overridden
-            return null;
+            // @TODO put in correct statement
+            throw new FledPresistanceException(LanguageStatements.NONE, ex);
         }
-        else
-        {
-            
-        }
-        
-        return null;
     }
 
     @Override
@@ -187,18 +214,4 @@ public class BPlusTree implements Presistance, Serializer
     {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-    
-    
-    @Override
-    public Object deserialize(ByteBuffer buffer) 
-    {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public ByteBuffer serialize(Object obj) 
-    {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-    
 }

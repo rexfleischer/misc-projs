@@ -20,7 +20,7 @@ public interface Presistance
      * @return the old object, if any
      * @throws FledPresistanceException 
      */
-    public Object insert(long id, Object record)
+    public Object insert(long id, Object record, boolean replace)
             throws FledPresistanceException;
     
     public void delete(long id)
