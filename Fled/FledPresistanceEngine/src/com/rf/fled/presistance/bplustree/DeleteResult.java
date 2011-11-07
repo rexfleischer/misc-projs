@@ -10,5 +10,7 @@ package com.rf.fled.presistance.bplustree;
  */
 public class DeleteResult 
 {
+    public boolean underflow;
     
+    public Object removedValue;
 }

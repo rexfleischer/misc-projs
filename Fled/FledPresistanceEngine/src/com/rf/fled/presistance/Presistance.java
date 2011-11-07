@@ -4,6 +4,7 @@
  */
 package com.rf.fled.presistance;
 
+import com.rf.fled.interfaces.Browser;
 import com.rf.fled.exceptions.FledPresistanceException;
 import com.rf.fled.util.Pair;
 

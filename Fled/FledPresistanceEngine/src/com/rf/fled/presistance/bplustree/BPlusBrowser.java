@@ -6,7 +6,7 @@ package com.rf.fled.presistance.bplustree;
 
 import com.rf.fled.exceptions.FledPresistanceException;
 import com.rf.fled.language.LanguageStatements;
-import com.rf.fled.presistance.Browser;
+import com.rf.fled.interfaces.Browser;
 import com.rf.fled.util.Pair;
 
 /**

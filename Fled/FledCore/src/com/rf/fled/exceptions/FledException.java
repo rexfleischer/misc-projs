@@ -6,6 +6,7 @@ package com.rf.fled.exceptions;
 
 import com.rf.fled.language.LanguageStatements;
 import com.rf.fled.language.Languages;
+import java.io.IOException;
 
 /**
  *
@@ -18,7 +19,7 @@ public class FledException extends Exception
         super();
     }
     
-    public FledException(LanguageStatements statement)
+    public FledException(LanguageStatements statement) 
     {
         super(Languages.sts(statement));
     }

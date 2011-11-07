@@ -341,20 +341,20 @@ public class BPlusPage implements Externalizable
             }
         }
         
+        // if this is a leaf, then we need to connect them together
         if (isLeaf)
         {
             newPage.setPreviousBucketId(thisId);
+            setNextBucketId(newPage.getThisBuckedId());
             if (nextId != 0)
             {
+                // if there is a next bucket, then we need to link it
                 BPlusPage nextPage = treeManager.getPageManager().getPage(nextId);
                 nextPage.setPreviousBucketId(newPage.getThisBuckedId());
                 newPage.setNextBucketId(nextPage.getThisBuckedId());
                 treeManager.getPageManager().savePage(nextPage);
             }
         }
-        
-        setNextBucketId(newPage.getThisBuckedId());
-        newPage.setPreviousBucketId(getThisBuckedId());
         
         treeManager.getPageManager().savePage(this);
         treeManager.getPageManager().savePage(newPage);

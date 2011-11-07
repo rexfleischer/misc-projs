@@ -6,7 +6,7 @@ package com.rf.fled.presistance.bplustree;
 
 import com.rf.fled.exceptions.FledPresistanceException;
 import com.rf.fled.language.LanguageStatements;
-import com.rf.fled.presistance.Browser;
+import com.rf.fled.interfaces.Browser;
 import com.rf.fled.presistance.Presistance;
 import com.rf.fled.presistance.Serializer;
 import com.rf.fled.util.FileSerializer;
@@ -151,6 +151,8 @@ public class BPlusTree implements Presistance
             {
                 InsertResult result = rootPage.insert(id, record, replace);
                 boolean treeNeedsUpdate = false;
+                
+                // 
                 if (result.overflowPage != null)
                 {
                     BPlusPage newRoot = new BPlusPage(this, rootPage, result.overflowPage);
@@ -159,6 +161,9 @@ public class BPlusTree implements Presistance
                     order++;
                     treeNeedsUpdate = true;
                 }
+                
+                // if there is no existing value, then that means it was 
+                // a new insert and we want to count that.
                 if (result.existing == null)
                 {
                     recordCount++;
