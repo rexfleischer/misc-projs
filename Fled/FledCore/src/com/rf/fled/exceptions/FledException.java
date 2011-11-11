@@ -6,7 +6,6 @@ package com.rf.fled.exceptions;
 
 import com.rf.fled.language.LanguageStatements;
 import com.rf.fled.language.Languages;
-import java.io.IOException;
 
 /**
  *

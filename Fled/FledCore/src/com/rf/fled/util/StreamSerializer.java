@@ -5,55 +5,49 @@
 
 package com.rf.fled.util;
 
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 
 /**
  *
  * @author REx
  */
-public class FileSerializer
+public class StreamSerializer
 {
-    public static void serialize(String filename, Object data)
+    public static void serialize(OutputStream output, Object data)
             throws IOException
     {
-        FileOutputStream fileOut = null;
         ObjectOutputStream out = null;
         try
         {
-            fileOut = new FileOutputStream(filename);
-            out = new ObjectOutputStream(fileOut);
+            out = new ObjectOutputStream(output);
             out.writeObject(data);
         }
         finally
         {
-            out.close();
-            fileOut.close();
+            if (out != null)
+                out.close();
         }   
     }
 
-    public static Object deserialize(String filename)
+    public static Object deserialize(InputStream input)
             throws  FileNotFoundException,
                     IOException,
                     ClassNotFoundException
     {
         Object result = null;
-        FileInputStream fileIn = null;
         ObjectInputStream in = null;
         try
         {
-            fileIn = new FileInputStream(filename);
-            in = new ObjectInputStream(fileIn);
+            in = new ObjectInputStream(input);
             result = in.readObject();
         }
         finally
         {
-            if (fileIn != null)
-                fileIn.close();
             if (in != null)
                 in.close();
         }

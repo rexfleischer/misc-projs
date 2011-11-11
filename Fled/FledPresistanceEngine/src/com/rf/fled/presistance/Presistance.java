@@ -24,7 +24,7 @@ public interface Presistance
     public Object insert(long id, Object record, boolean replace)
             throws FledPresistanceException;
     
-    public void delete(long id)
+    public Object delete(long id)
             throws FledPresistanceException;
     
     public Object select(long id)
@@ -34,14 +34,5 @@ public interface Presistance
             throws FledPresistanceException;
     
     public Browser<Pair<Long, Object>> browse()
-            throws FledPresistanceException;
-    
-    public void beginTransaction()
-            throws FledPresistanceException;
-    
-    public void commit()
-            throws FledPresistanceException;
-    
-    public void rollback()
             throws FledPresistanceException;
 }

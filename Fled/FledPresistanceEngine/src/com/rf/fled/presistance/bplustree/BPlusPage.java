@@ -70,6 +70,7 @@ public class BPlusPage implements Externalizable
      * to the children page bucket id
      */
     private long[] childrenPages;
+    public long getChildId(int index) { return childrenPages[index]; }
     
     /**
      * this represents the amount of keys used in the array.
@@ -157,6 +158,11 @@ public class BPlusPage implements Externalizable
     public boolean isFull()
     {
         return keysUsed == keys.length;
+    }
+
+    boolean isEmpty() 
+    {
+        return keysUsed == 0;
     }
     
     public Object select(long key) 
@@ -363,6 +369,88 @@ public class BPlusPage implements Externalizable
         return result;
     }
     
+    public DeleteResult delete(long key)
+            throws FledPresistanceException
+    {
+        DeleteResult result = null;
+        int half = treeManager.getRecordsPerPage() >> 1;
+        int index = findFirstGreaterOrEqualChild(key);
+
+        if (isLeaf)
+        {
+            result = new DeleteResult();
+            if (keys[index] != key)
+            {
+                result.removedValue = null;
+                result.underflow    = false;
+                return result;
+            }
+
+            result.underflow    = false;
+            result.removedValue = values[index];
+            deleteEntry(index);
+        }
+        else
+        {
+            BPlusPage child = treeManager
+                    .getPageManager()
+                    .getPage(childrenPages[index]);
+            result = child.delete(key);
+            
+            keys[index] = child.getKey(0);
+            
+            if (result.underflow)
+            {
+                if (index < half)
+                {
+                    BPlusPage brother = treeManager
+                            .getPageManager()
+                            .getPage(childrenPages[index+1]);
+                    
+                    if (brother.compacityUsed() > half)
+                    {
+                        // this is the formual for how much is going to be
+                        // stolen from the brother page. the formula ensures
+                        // that the amount of records stolen from the brother
+                        // wont leave the brother less than half empty
+                        int stealing = (brother.compacityUsed() - half + 1) / 2;
+                        
+                        
+                    }
+                    else
+                    {
+                        // getting here means that the brother page is half 
+                        // full, and sense the child page is under half full,
+                        // we are just going to dump the child page into
+                        // the bother page.
+                    }
+                }
+                else
+                {
+                    BPlusPage brother = treeManager
+                            .getPageManager()
+                            .getPage(childrenPages[index-1]);
+                    int bhalf = brother.compacityUsed() / 2;
+                    
+                    if (bhalf < half)
+                    {
+                        int stealing = (brother.compacityUsed() - half + 1) / 2;
+                        
+                    }
+                    else
+                    {
+                        
+                    }
+                }
+            }
+        }
+
+        // check if there is an underflow
+        result.underflow = keysUsed < half;
+
+        return result;
+    }
+    
     /**
      * this is used for non-leafs, and gets the first 'fitting' key for
      * the next page. 
@@ -454,6 +542,16 @@ public class BPlusPage implements Externalizable
     }
     
     public void nullChildren(int start, int count)
+    {
+        
+    }
+    
+    public void deleteChild(int index)
+    {
+        
+    }
+    
+    public void deleteEntry(int index)
     {
         
     }

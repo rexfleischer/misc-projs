@@ -42,11 +42,15 @@ public enum Languages
     }
     
     public static String sts(LanguageStatements statement) 
-            throws IOException
     {
-        String language = FledPropertiesFactory
-                .getProperties()
-                .getProperty(FledConfigOption.LANGUAGE.name());
+        String language;
+        try {
+            language = FledPropertiesFactory
+             .getProperties()
+             .getProperty(FledConfigOption.LANGUAGE.name());
+        } catch (IOException ex) {
+            language = ENGLISH.name();
+        }
         return Languages
                 .valueOf(language)
                 .getTranslator()

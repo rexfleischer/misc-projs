@@ -5,18 +5,23 @@
 package com.rf.fled.presistance.bplustree;
 
 import com.rf.fled.exceptions.FledPresistanceException;
+import com.rf.fled.exceptions.FledStateException;
 import com.rf.fled.language.LanguageStatements;
 import com.rf.fled.interfaces.Browser;
 import com.rf.fled.presistance.Presistance;
 import com.rf.fled.presistance.Serializer;
-import com.rf.fled.util.FileSerializer;
+import com.rf.fled.util.StreamSerializer;
 import com.rf.fled.util.Pair;
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 
 /**
  *
  * @author REx
  */
-public class BPlusTree implements Presistance
+public class BPlusTree implements Presistance, Externalizable
 {
     /**
      * the manager of all of the pages on the file system
@@ -38,7 +43,7 @@ public class BPlusTree implements Presistance
     /**
      * total number of records in the tree
      */
-    private int recordCount;
+    private long recordCount;
     
     /**
      * this is the number of records per page that are allowed. this
@@ -56,7 +61,7 @@ public class BPlusTree implements Presistance
     /**
      * the serializer for bring object into and out of a ByteBuffer
      */
-    private Serializer serializer;
+    private Serializer valueSerializer;
 
     @Override
     public Object select(long id) 
@@ -172,25 +177,73 @@ public class BPlusTree implements Presistance
 
                 if (treeNeedsUpdate)
                 {
-                    FileSerializer.serialize(null, this);
+                    // @TODO make tree serializer
+                    StreamSerializer.serialize(null, this);
                 }
                 return result.existing;
             }
         }
         catch(Exception ex)
         {
-            // @TODO put in correct statement
+            // @TODO statement
             throw new FledPresistanceException(LanguageStatements.NONE, ex);
         }
     }
 
     @Override
-    public void delete(long id) 
+    public Object delete(long id) 
             throws FledPresistanceException
     {
-        
-        
-        recordCount--;
+        try
+        {
+            BPlusPage rootPage = getRootPage();
+            if (rootPage == null)
+            {
+                // @TODO statement
+                throw new FledStateException(LanguageStatements.NONE);
+            }
+            
+            boolean thisNeedsUpdate = false;
+            DeleteResult result = rootPage.delete(id);
+            
+            if (result.underflow && rootPage.compacityUsed() < 2)
+            {
+                thisNeedsUpdate = true;
+                
+                if (rootPage.compacityUsed() == 1)
+                {
+                    root = pageManager
+                            .getPage(rootPage.getChildId(0))
+                            .getThisBuckedId();
+                    pageManager.deletePage(rootPage.getThisBuckedId());
+                }
+                else
+                {
+                    root = -1;
+                    pageManager.deletePage(rootPage.getThisBuckedId());
+                }
+            }
+            
+            if (result.removedValue != null)
+            {
+                thisNeedsUpdate = true;
+                
+                recordCount--;
+            }
+            
+            if (thisNeedsUpdate)
+            {
+                // @TODO make tree serializer
+                StreamSerializer.serialize(null, this);
+            }
+            
+            return result.removedValue;
+        }
+        catch(Exception ex)
+        {
+            // @TODO statement
+            throw new FledPresistanceException(LanguageStatements.NONE, ex);
+        }
     }
     
     private BPlusPage getRootPage() 
@@ -198,25 +251,31 @@ public class BPlusTree implements Presistance
     {
         return pageManager.getPage(root);
     }
+
+    @Override
+    public void readExternal(ObjectInput in) 
+            throws  IOException, 
+                    ClassNotFoundException 
+    {
+        valueSerializer = (Serializer) in.readObject();
+        root            = in.readLong();
+        order           = in.readInt();
+        recordCount     = in.readLong();
+        recordsPerPage  = in.readInt();
+        pageCountAt     = in.readLong();
+    }
+
+    @Override
+    public void writeExternal(ObjectOutput out) 
+            throws IOException 
+    {
+        out.writeObject(valueSerializer);
+        out.writeLong(root);
+        out.writeInt(order);
+        out.writeLong(recordCount);
+        out.writeInt(recordsPerPage);
+        out.writeLong(pageCountAt);
+    }
     
-    @Override
-    public void beginTransaction() 
-            throws FledPresistanceException
-    {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public void commit() 
-            throws FledPresistanceException
-    {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public void rollback() 
-            throws FledPresistanceException
-    {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
+    
 }
