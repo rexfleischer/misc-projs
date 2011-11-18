@@ -5,6 +5,7 @@
 package com.rf.fled.presistance.bplustree;
 
 import com.rf.fled.exceptions.FledPresistanceException;
+import com.rf.fled.language.LanguageStatements;
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
@@ -16,6 +17,8 @@ import java.io.ObjectOutput;
  */
 public class BPlusPage implements Externalizable
 {
+    public static final Integer NULL_BUCKET = -1;
+    
     /**
      * the main controller of the tree
      */
@@ -75,7 +78,7 @@ public class BPlusPage implements Externalizable
     /**
      * this represents the amount of keys used in the array.
      */
-    private int keysUsed;
+    protected int keysUsed;
     public int compacityUsed() { return keysUsed; }
     
     /**
@@ -333,6 +336,11 @@ public class BPlusPage implements Externalizable
         }
         else
         {
+            // with 10 entries, plus the new one, the transform is as such
+            // this page before:    ||||||||||
+            // now, this is-->
+            // this page after:     |||||----
+            // overflow page:       |||N||-----
             if (isLeaf) 
             {
                 copyEntries(halfPageSize, newPage, 0, halfPageSize);
@@ -415,7 +423,34 @@ public class BPlusPage implements Externalizable
                         // wont leave the brother less than half empty
                         int stealing = (brother.compacityUsed() - half + 1) / 2;
                         
+                        brother.keysUsed -= stealing;
+                        child.keysUsed += stealing;
                         
+                        if (child.isLeaf)
+                        {
+                            // put the first entries at the end of this one
+                            brother.copyEntries(0, child, half, stealing);
+                            
+                            // now, shift the array to fill the unused spots now
+                            brother.copyEntries(stealing, brother, 0, brother.keysUsed);
+                            
+                            // null the now unused entries
+                            brother.nullEntries(brother.keysUsed, stealing);
+                        }
+                        else
+                        {
+                            brother.copyChildren(0, child, half, stealing);
+                            brother.copyChildren(stealing, brother, 0, brother.keysUsed);
+                            brother.nullChildren(brother.keysUsed, stealing);
+                        }
+                        
+                        // update the children pages again
+                        keys[index] = child.getKey(0);
+                        keys[index + 1] = brother.getKey(0);
+                        
+                        treeManager.getPageManager().savePage(this);
+                        treeManager.getPageManager().savePage(child);
+                        treeManager.getPageManager().savePage(brother);
                     }
                     else
                     {
@@ -423,6 +458,58 @@ public class BPlusPage implements Externalizable
                         // full, and sense the child page is under half full,
                         // we are just going to dump the child page into
                         // the bother page.
+                        
+                        // @TODO check the other side
+                        if (brother.compacityUsed() != half)
+                        {
+                            // this means that something really, really
+                            // bad happened, but save what we've done
+                            // so far.
+                            treeManager.getPageManager().savePage(this);
+                            // @TODO statement
+                            throw new FledPresistanceException(LanguageStatements.NONE);
+                        }
+                        
+                        brother.keysUsed = brother.keys.length - 1;
+                        
+                        // copy over everything from child to brother
+                        if (child.isLeaf)
+                        {
+                            // shift the entries to make room
+                            brother.copyEntries(0, brother, half - 1, half);
+                            
+                            // now copy what is in the child to the brother
+                            child.copyEntries(0, brother, 0, half - 1);
+                        }
+                        else
+                        {
+                            brother.copyChildren(0, brother, half - 1, half);
+                            child.copyChildren(0, brother, 0, half - 1);
+                        }
+                        
+                        this.deleteChild(index);
+                        
+                        if (child.getPreviousBucketId() != NULL_BUCKET)
+                        {
+                            BPlusPage prev = treeManager
+                                    .getPageManager()
+                                    .getPage(child.getPreviousBucketId());
+                            prev.setNextBucketId(child.getNextBucketId());
+                            treeManager.getPageManager().savePage(prev);
+                        }
+                        
+                        if (child.getNextBucketId() != NULL_BUCKET)
+                        {
+                            BPlusPage next = treeManager
+                                    .getPageManager()
+                                    .getPage(child.getNextBucketId());
+                            next.setPreviousBucketId(child.getPreviousBucketId());
+                            treeManager.getPageManager().savePage(next);
+                        }
+                        
+                        treeManager.getPageManager().savePage(this);
+                        treeManager.getPageManager().savePage(brother);
+                        treeManager.getPageManager().deletePage(child.getThisBuckedId());
                     }
                 }
                 else
@@ -430,18 +517,99 @@ public class BPlusPage implements Externalizable
                     BPlusPage brother = treeManager
                             .getPageManager()
                             .getPage(childrenPages[index-1]);
-                    int bhalf = brother.compacityUsed() / 2;
                     
-                    if (bhalf < half)
+                    if (brother.compacityUsed() > half)
                     {
                         int stealing = (brother.compacityUsed() - half + 1) / 2;
                         
+                        brother.keysUsed -= stealing;
+                        child.keysUsed += stealing;
+                        
+                        if (child.isLeaf)
+                        {
+                            // shift child to make room for new entries
+                            child.copyEntries(0, child, stealing, child.keysUsed - stealing);
+                            
+                            // copy from brother to child
+                            brother.copyEntries(0, child, 0, stealing);
+                            
+                            // shift brother
+                            brother.copyEntries(stealing, brother, 0, brother.keysUsed);
+                            
+                            // null the now unused entries
+                            brother.nullEntries(brother.keysUsed, stealing);
+                        }
+                        else
+                        {
+                            child.copyChildren(0, child, stealing, child.keysUsed - stealing);
+                            brother.copyChildren(0, child, 0, stealing);
+                            brother.copyChildren(stealing, brother, 0, brother.keysUsed);
+                            brother.nullChildren(brother.keysUsed, stealing);
+                        }
+                        
+                        // update the children pages again
+                        keys[index] = child.getKey(0);
+                        keys[index - 1] = brother.getKey(0);
+                        
+                        treeManager.getPageManager().savePage(this);
+                        treeManager.getPageManager().savePage(child);
+                        treeManager.getPageManager().savePage(brother);
                     }
                     else
                     {
+                        // @TODO check the other side
+                        if (brother.compacityUsed() != half)
+                        {
+                            // this means that something really, really
+                            // bad happened, but save what we've done
+                            // so far.
+                            treeManager.getPageManager().savePage(this);
+                            // @TODO statement
+                            throw new FledPresistanceException(LanguageStatements.NONE);
+                        }
                         
+                        brother.keysUsed = brother.keys.length - 1;
+                        
+                        // copy over everything from child to brother
+                        if (child.isLeaf)
+                        {
+                            // copy everything over
+                            child.copyEntries(0, brother, half + 1, child.keysUsed);
+                        }
+                        else
+                        {
+                            child.copyChildren(0, brother, half + 1, child.keysUsed);
+                        }
+                        
+                        this.deleteChild(index);
+                        
+                        if (child.getPreviousBucketId() != NULL_BUCKET)
+                        {
+                            BPlusPage prev = treeManager
+                                    .getPageManager()
+                                    .getPage(child.getPreviousBucketId());
+                            prev.setNextBucketId(child.getNextBucketId());
+                            treeManager.getPageManager().savePage(prev);
+                        }
+                        
+                        if (child.getNextBucketId() != NULL_BUCKET)
+                        {
+                            BPlusPage next = treeManager
+                                    .getPageManager()
+                                    .getPage(child.getNextBucketId());
+                            next.setPreviousBucketId(child.getPreviousBucketId());
+                            treeManager.getPageManager().savePage(next);
+                        }
+                        
+                        treeManager.getPageManager().savePage(this);
+                        treeManager.getPageManager().savePage(brother);
+                        treeManager.getPageManager().deletePage(child.getThisBuckedId());
                     }
                 }
+            }
+            else
+            {
+                treeManager.getPageManager().savePage(this);
             }
         }
 
@@ -457,7 +625,7 @@ public class BPlusPage implements Externalizable
      * @param key
      * @return 
      */
-    private int findFirstGreaterOrEqualChild(long key)
+    protected int findFirstGreaterOrEqualChild(long key)
     {
         int left = 0;
         int right = keysUsed;
@@ -478,7 +646,7 @@ public class BPlusPage implements Externalizable
         return right;
     }
     
-    private void insertEntry(long key, Object value, int insertIndex)
+    protected void insertEntry(long key, Object value, int insertIndex)
     {
         System.arraycopy(
                 keys, 
@@ -497,7 +665,7 @@ public class BPlusPage implements Externalizable
         values[insertIndex] = value;
     }
     
-    private void insertChild(long key, long value, int insertIndex)
+    protected void insertChild(long key, long value, int insertIndex)
     {
         System.arraycopy(
                 keys, 
@@ -516,44 +684,48 @@ public class BPlusPage implements Externalizable
         childrenPages[insertIndex] = value;
     }
     
-    private void copyEntries(int index, BPlusPage dest, int destIndex, int count)
+    protected void deleteChild(int index)
     {
-        
+        System.arraycopy(keys, index + 1, keys, index, keysUsed - index);
+        System.arraycopy(childrenPages, index + 1, childrenPages, index, keysUsed - index);
+        keysUsed--;
     }
     
-    private void copyChildren(int index, BPlusPage dest, int destIndex, int count)
+    protected void deleteEntry(int index)
     {
-        
+        System.arraycopy(keys, index + 1, keys, index, keysUsed - index);
+        System.arraycopy(values, index + 1, values, index, keysUsed - index);
+        keysUsed--;
     }
     
-    public void setChild(int index, long key, long childId)
+    protected void copyEntries(int index, BPlusPage dest, int destIndex, int count)
     {
-        
+        System.arraycopy(keys, index, dest.keys, destIndex, count);
+        System.arraycopy(values, index, dest.values, destIndex, count);
     }
     
-    public void setEntry(int index, long key, Object value)
+    protected void copyChildren(int index, BPlusPage dest, int destIndex, int count)
     {
-        
+        System.arraycopy(keys, index, dest.keys, destIndex, count);
+        System.arraycopy(childrenPages, index, dest.childrenPages, destIndex, count);
     }
     
-    public void nullEntries(int start, int count)
+    protected void nullEntries(int start, int count)
     {
-        
+        for(int i = start; i < start + count; i++)
+        {
+            keys[i] = NULL_BUCKET;
+            values[i] = null;
+        }
     }
     
-    public void nullChildren(int start, int count)
+    protected void nullChildren(int start, int count)
     {
-        
-    }
-    
-    public void deleteChild(int index)
-    {
-        
-    }
-    
-    public void deleteEntry(int index)
-    {
-        
+        for(int i = start; i < start + count; i++)
+        {
+            keys[i] = NULL_BUCKET;
+            childrenPages[i] = NULL_BUCKET;
+        }
     }
 
     @Override
