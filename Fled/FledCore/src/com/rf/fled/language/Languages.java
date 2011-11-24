@@ -43,21 +43,14 @@ public enum Languages
     
     public static String sts(LanguageStatements statement) 
     {
-        String language;
-        try {
-            language = FledPropertiesFactory
-             .getProperties()
-             .getProperty(FledConfigOption.LANGUAGE.name());
-        } catch (IOException ex) {
-            language = ENGLISH.name();
-        }
-        return Languages
-                .valueOf(language)
-                .getTranslator()
-                .interpret(statement);
-//        return FledEngine.get()
-//                .getDefaultLanguage()
-//                .instance
-//                .interpret(statement);
+//        String language;
+//        try {
+//            language = FledPropertiesFactory
+//             .getProperties()
+//             .getProperty(FledConfigOption.LANGUAGE.name());
+//        } catch (IOException ex) {
+//            language = ENGLISH.name();
+//        }
+        return ENGLISH.getTranslator().interpret(statement);
     }
 }

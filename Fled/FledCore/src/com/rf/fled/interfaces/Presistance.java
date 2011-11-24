@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.rf.fled.presistance;
+package com.rf.fled.interfaces;
 
 import com.rf.fled.interfaces.Browser;
 import com.rf.fled.exceptions.FledPresistanceException;

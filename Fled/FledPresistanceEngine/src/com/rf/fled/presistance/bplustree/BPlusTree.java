@@ -4,18 +4,19 @@
  */
 package com.rf.fled.presistance.bplustree;
 
+import com.rf.fled.presistance.filemanager.FlatFileManager;
 import com.rf.fled.exceptions.FledPresistanceException;
 import com.rf.fled.exceptions.FledStateException;
 import com.rf.fled.language.LanguageStatements;
 import com.rf.fled.interfaces.Browser;
-import com.rf.fled.presistance.Presistance;
-import com.rf.fled.presistance.Serializer;
-import com.rf.fled.util.StreamSerializer;
+import com.rf.fled.interfaces.Presistance;
+import com.rf.fled.interfaces.Serializer;
 import com.rf.fled.util.Pair;
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.nio.ByteBuffer;
 
 /**
  *
@@ -23,11 +24,13 @@ import java.io.ObjectOutput;
  */
 public class BPlusTree implements Presistance, Externalizable
 {
+    public static final String EXTENSION = "btree";
+    
     /**
      * the manager of all of the pages on the file system
      */
-    private BPlusPageManager pageManager;
-    public BPlusPageManager getPageManager() { return pageManager; }
+    private FlatFileManager pageManager;
+    public FlatFileManager getPageManager() { return pageManager; }
     
     /**
      * the first pages id
@@ -44,6 +47,13 @@ public class BPlusTree implements Presistance, Externalizable
      * total number of records in the tree
      */
     private long recordCount;
+    public long getCount(){ return recordCount; }
+    
+    /**
+     * 
+     */
+    private String btreeName;
+    public String getBTreeName(){ return btreeName; }
     
     /**
      * this is the number of records per page that are allowed. this
@@ -61,7 +71,59 @@ public class BPlusTree implements Presistance, Externalizable
     /**
      * the serializer for bring object into and out of a ByteBuffer
      */
-    private Serializer valueSerializer;
+    private Serializer<byte[]> valueSerializer;
+    public Serializer<byte[]> getValueSerializer(){ return valueSerializer; }
+    
+    private Serializer<ByteBuffer> pageSerializer;
+    public Serializer<ByteBuffer> getPageSerializer(){ return pageSerializer; }
+    
+    /**
+     * for serialization
+     */
+    public BPlusTree()
+    {
+        
+    }
+    
+    //public static BPlusTree 
+    
+    /**
+     * creation of a new BPlusTree
+     * @param workingDirectory 
+     */
+    public BPlusTree(
+            FlatFileManager pageManager,
+            Serializer<byte[]> valueSerializer, 
+            String btreeName,
+            int recordsPerPage)
+    {
+        if (pageManager == null)
+        {
+            throw new NullPointerException("pageManager");
+        }
+        if (valueSerializer == null)
+        {
+            throw new NullPointerException("valueSerializer");
+        }
+        if (btreeName == null || btreeName.isEmpty())
+        {
+            throw new NullPointerException("btreeName");
+        }
+        if (recordsPerPage < 3)
+        {
+            throw new IllegalArgumentException(
+                    "recordsPerPage cannot be less than 3");
+        }
+        this.valueSerializer    = valueSerializer;
+        this.pageSerializer     = new BPlusPage.BPlusPageSerializer(this);
+        this.pageManager        = pageManager;
+        this.root               = BPlusPage.NULL_BUCKET;
+        this.recordsPerPage     = recordsPerPage;
+        this.order              = 0;
+        this.recordCount        = 0;
+        this.pageCountAt        = 0;
+        this.btreeName          = btreeName;
+    }
 
     @Override
     public Object select(long id) 
@@ -145,9 +207,17 @@ public class BPlusTree implements Presistance, Externalizable
 
                 // first record
                 recordCount = 1;
+                
+                root = newRoot.getThisBuckedId();
 
-                // save the file to file
-                pageManager.savePage(newRoot);
+                // save the file to disk
+                pageManager.savePage(
+                        buildPageId(newRoot.getThisBuckedId()), 
+                        newRoot, 
+                        pageSerializer);
+                
+                // save the tree to disk
+                pageManager.savePage(buildTreeId(), this, null);
 
                 // no object was overridden
                 return null;
@@ -162,7 +232,10 @@ public class BPlusTree implements Presistance, Externalizable
                 {
                     BPlusPage newRoot = new BPlusPage(this, rootPage, result.overflowPage);
                     root = newRoot.getThisBuckedId();
-                    pageManager.savePage(newRoot);
+                    pageManager.savePage(
+                            buildPageId(newRoot.getThisBuckedId()), 
+                            newRoot, 
+                            pageSerializer);
                     order++;
                     treeNeedsUpdate = true;
                 }
@@ -178,7 +251,7 @@ public class BPlusTree implements Presistance, Externalizable
                 if (treeNeedsUpdate)
                 {
                     // @TODO make tree serializer
-                    StreamSerializer.serialize(null, this);
+                    pageManager.savePage(buildTreeId(), this, null);
                 }
                 return result.existing;
             }
@@ -212,15 +285,15 @@ public class BPlusTree implements Presistance, Externalizable
                 
                 if (rootPage.compacityUsed() == 1)
                 {
-                    root = pageManager
-                            .getPage(rootPage.getChildId(0))
-                            .getThisBuckedId();
-                    pageManager.deletePage(rootPage.getThisBuckedId());
+                    root = rootPage.getChildId(0);
+                    pageManager.deletePage(
+                            buildPageId(rootPage.getThisBuckedId()));
                 }
                 else
                 {
                     root = -1;
-                    pageManager.deletePage(rootPage.getThisBuckedId());
+                    pageManager.deletePage(
+                            buildPageId(rootPage.getThisBuckedId()));
                 }
             }
             
@@ -234,7 +307,7 @@ public class BPlusTree implements Presistance, Externalizable
             if (thisNeedsUpdate)
             {
                 // @TODO make tree serializer
-                StreamSerializer.serialize(null, this);
+                pageManager.savePage(buildTreeId(), this, null);
             }
             
             return result.removedValue;
@@ -249,7 +322,21 @@ public class BPlusTree implements Presistance, Externalizable
     private BPlusPage getRootPage() 
             throws FledPresistanceException
     {
-        return pageManager.getPage(root);
+        if (root == BPlusPage.NULL_BUCKET)
+        {
+            return null;
+        }
+        return (BPlusPage) pageManager.getPage(buildPageId(root), pageSerializer);
+    }
+    
+    protected String buildPageId(long id)
+    {
+        return btreeName + String.valueOf(id) + "." + BPlusPage.EXTENSION;
+    }
+    
+    private String buildTreeId()
+    {
+        return btreeName + "." + BPlusTree.EXTENSION;
     }
 
     @Override
@@ -263,6 +350,7 @@ public class BPlusTree implements Presistance, Externalizable
         recordCount     = in.readLong();
         recordsPerPage  = in.readInt();
         pageCountAt     = in.readLong();
+        btreeName       = (String) in.readObject();
     }
 
     @Override
@@ -275,7 +363,6 @@ public class BPlusTree implements Presistance, Externalizable
         out.writeLong(recordCount);
         out.writeInt(recordsPerPage);
         out.writeLong(pageCountAt);
+        out.writeObject(btreeName);
     }
-    
-    
 }

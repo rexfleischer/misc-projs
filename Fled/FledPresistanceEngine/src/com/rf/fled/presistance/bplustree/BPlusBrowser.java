@@ -4,6 +4,7 @@
  */
 package com.rf.fled.presistance.bplustree;
 
+import com.rf.fled.presistance.filemanager.FlatFileManager;
 import com.rf.fled.exceptions.FledPresistanceException;
 import com.rf.fled.language.LanguageStatements;
 import com.rf.fled.interfaces.Browser;
@@ -15,6 +16,11 @@ import com.rf.fled.util.Pair;
  */
 public class BPlusBrowser implements Browser<Pair<Long, Object>>
 {
+    /**
+     * the current managing btree
+     */
+    private BPlusTree bplustree;
+    
     /**
      * the current page the browser is on
      */
@@ -28,7 +34,7 @@ public class BPlusBrowser implements Browser<Pair<Long, Object>>
     /**
      * the manager for getting pages
      */
-    private BPlusPageManager pageManager;
+    private FlatFileManager pageManager;
     
     /**
      * 
@@ -38,7 +44,7 @@ public class BPlusBrowser implements Browser<Pair<Long, Object>>
      */
     public BPlusBrowser(
             BPlusPage page, 
-            BPlusPageManager pageManager, 
+            FlatFileManager pageManager, 
             int index)
     {
         this.page = page;
@@ -95,7 +101,9 @@ public class BPlusBrowser implements Browser<Pair<Long, Object>>
             }
             
             // get the next page
-            page = pageManager.getPage(page.getNextBucketId());
+            page = (BPlusPage) pageManager.getPage(
+                    bplustree.buildPageId(page.getNextBucketId()), 
+                    bplustree.getPageSerializer());
             if (page == null)
             {
                 // something messed up bad
@@ -133,10 +141,14 @@ public class BPlusBrowser implements Browser<Pair<Long, Object>>
             {
                 return false;
             }
-            page = pageManager.getPage(page.getPreviousBucketId());
+            page = (BPlusPage) pageManager.getPage(
+                    bplustree.buildPageId(page.getPreviousBucketId()), 
+                    bplustree.getPageSerializer());
             
             // get the next page
-            page = pageManager.getPage(page.getNextBucketId());
+            page = (BPlusPage) pageManager.getPage(
+                    bplustree.buildPageId(page.getNextBucketId()), 
+                    bplustree.getPageSerializer());
             if (page == null)
             {
                 // something messed up bad

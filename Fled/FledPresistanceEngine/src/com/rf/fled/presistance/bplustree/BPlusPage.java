@@ -5,19 +5,24 @@
 package com.rf.fled.presistance.bplustree;
 
 import com.rf.fled.exceptions.FledPresistanceException;
+import com.rf.fled.interfaces.Serializer;
 import com.rf.fled.language.LanguageStatements;
-import java.io.Externalizable;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.nio.ByteBuffer;
 
 /**
  *
  * @author REx
  */
-public class BPlusPage implements Externalizable
+public class BPlusPage
 {
-    public static final Integer NULL_BUCKET = -1;
+    public static final String EXTENSION = "bpage";
+    
+    public static final Integer NULL_BUCKET = 0;
     
     /**
      * the main controller of the tree
@@ -72,8 +77,8 @@ public class BPlusPage implements Externalizable
      * the values of the pages that map the keys. these basically point
      * to the children page bucket id
      */
-    private long[] childrenPages;
-    public long getChildId(int index) { return childrenPages[index]; }
+    private long[] children;
+    public long getChildId(int index) { return children[index]; }
     
     /**
      * this represents the amount of keys used in the array.
@@ -89,21 +94,21 @@ public class BPlusPage implements Externalizable
         isLeaf = leaf;
         this.treeManager = treeManager;
         
-        keysUsed    = 0;
-        keys        = new long[treeManager.getRecordsPerPage()];
-        nextId      = 0;
-        prevId      = 0;
-        this.thisId = treeManager.incrementPageCount();
+        this.keysUsed   = 0;
+        this.keys       = new long[treeManager.getRecordsPerPage()];
+        this.nextId     = NULL_BUCKET;
+        this.prevId     = NULL_BUCKET;
+        this.thisId     = treeManager.incrementPageCount();
         
         if (isLeaf)
         {
-            childrenPages   = null;
-            values          = new Object[treeManager.getRecordsPerPage()];
+            children    = null;
+            values      = new Object[treeManager.getRecordsPerPage()];
         }
         else
         {
-            childrenPages   = new long[treeManager.getRecordsPerPage()];
-            values          = null;
+            children    = new long[treeManager.getRecordsPerPage()];
+            values      = null;
         }
     }
     
@@ -119,30 +124,44 @@ public class BPlusPage implements Externalizable
         this.treeManager = treeManager;
         this.thisId = treeManager.incrementPageCount();
         
-        keysUsed = 1;
-        keys            = new long[treeManager.getRecordsPerPage()];
-        values          = new Object[treeManager.getRecordsPerPage()];
-        childrenPages   = null; // not used if leaf
+        keysUsed    = 1;
+        nextId      = NULL_BUCKET;
+        prevId      = NULL_BUCKET;
+        keys        = new long[treeManager.getRecordsPerPage()];
+        values      = new Object[treeManager.getRecordsPerPage()];
+        children    = null; // not used if leaf
+        
+        keys[0]     = key;
+        values[0]   = value;
     }
     
+    /**
+     * new root construct.. this cannot be a leaf. if it is, then first insert
+     * construct needs to be used.
+     * @param treeManager
+     * @param rootPage
+     * @param flowPage 
+     */
     public BPlusPage(
             BPlusTree treeManager, 
             BPlusPage rootPage, 
             BPlusPage flowPage)
     {
-        this.isLeaf = true;
+        this.isLeaf = false;
         this.treeManager = treeManager;
         this.thisId = treeManager.incrementPageCount();
         
-        keysUsed = 1;
-        keys            = new long[treeManager.getRecordsPerPage()];
-        values          = null;
-        childrenPages   = new long[treeManager.getRecordsPerPage()];
+        keysUsed    = 2;
+        nextId      = NULL_BUCKET;
+        prevId      = NULL_BUCKET;
+        keys        = new long[treeManager.getRecordsPerPage()];
+        values      = null;
+        children    = new long[treeManager.getRecordsPerPage()];
         
         keys[0] = rootPage.getKey(0);
         keys[1] = flowPage.getKey(0);
-        childrenPages[0] = rootPage.getThisBuckedId();
-        childrenPages[1] = flowPage.getThisBuckedId();
+        children[0] = rootPage.getThisBuckedId();
+        children[1] = flowPage.getThisBuckedId();
     }
     
     /**
@@ -171,7 +190,7 @@ public class BPlusPage implements Externalizable
     public Object select(long key) 
             throws FledPresistanceException
     {
-        int index = findFirstGreaterOrEqualChild(key);
+        int index = findFirstLessOrEqualChild(key);
         if (isLeaf)
         {
             if (keys[index] == key)
@@ -182,9 +201,11 @@ public class BPlusPage implements Externalizable
         }
         else
         {
-            return treeManager
+            return ((BPlusPage) treeManager
                     .getPageManager()
-                    .getPage(childrenPages[index])
+                    .getPage(
+                        treeManager.buildPageId(children[index]), 
+                        treeManager.getPageSerializer()))
                     .select(key);
         }
     }
@@ -192,16 +213,18 @@ public class BPlusPage implements Externalizable
     public BPlusBrowser browse(long key)
             throws FledPresistanceException
     {
-        int index = findFirstGreaterOrEqualChild(key);
+        int index = findFirstLessOrEqualChild(key);
         if (isLeaf)
         {
             return new BPlusBrowser(this, treeManager.getPageManager(), index);
         }
         else
         {
-            return treeManager
+            return ((BPlusPage) treeManager
                     .getPageManager()
-                    .getPage(childrenPages[index])
+                    .getPage(
+                        treeManager.buildPageId(children[index]), 
+                        treeManager.getPageSerializer()))
                     .browse(key);
         }
     }
@@ -215,9 +238,11 @@ public class BPlusPage implements Externalizable
         }
         else
         {
-            return treeManager
+            return ((BPlusPage) treeManager
                     .getPageManager()
-                    .getPage(childrenPages[0])
+                    .getPage(
+                        treeManager.buildPageId(children[0]), 
+                        treeManager.getPageSerializer()))
                     .browse();
         }
     }
@@ -227,7 +252,7 @@ public class BPlusPage implements Externalizable
     {
         long overFlowId = -1;
         InsertResult result;
-        int index = findFirstGreaterOrEqualChild(key);
+        int index = findFirstLessOrEqualChild(key);
         
         if (isLeaf)
         {
@@ -239,21 +264,26 @@ public class BPlusPage implements Externalizable
                 // replacing the key
                 
                 // for returning stuff and things
-                result.existing = key;
+                result.existing = values[index];
                 
                 if (replace)
                 {
                     values[index] = data;
-                    treeManager.getPageManager().savePage(this);
+                    treeManager.getPageManager().savePage(
+                            treeManager.buildPageId(thisId), 
+                            this, 
+                            treeManager.getPageSerializer());
                 }
                 return result;
             }
         }
         else
         {
-            BPlusPage child = treeManager
-                                .getPageManager()
-                                .getPage(childrenPages[index]);
+            BPlusPage child = (BPlusPage) treeManager
+                    .getPageManager()
+                    .getPage(
+                        treeManager.buildPageId(children[index]), 
+                        treeManager.getPageSerializer());
             result = child.insert(key, data, replace);
             
             if (result.existing != null)
@@ -292,13 +322,16 @@ public class BPlusPage implements Externalizable
             // to split this page
             if (isLeaf)
             {
-                insertEntry(key, data, index);
+                insertEntry(key, data, index+1);
             }
             else
             {
-                insertChild(key, overFlowId, index);
+                insertChild(key, overFlowId, index+1);
             }
-            treeManager.getPageManager().savePage(this);
+            treeManager.getPageManager().savePage(
+                    treeManager.buildPageId(thisId), 
+                    this, 
+                    treeManager.getPageSerializer());
             return result;
         }
         
@@ -324,14 +357,18 @@ public class BPlusPage implements Externalizable
             if (isLeaf)
             {
                 copyEntries(halfPageSize, newPage, 0, halfPageSize);
+                newPage.keysUsed = halfPageSize;
+                this.keysUsed = halfPageSize;
                 nullEntries(halfPageSize, halfPageSize);
-                insertEntry(key, data, index);
+                insertEntry(key, data, index-halfPageSize+1);
             }
             else
             {
                 copyChildren(halfPageSize, newPage, 0, halfPageSize);
+                newPage.keysUsed = halfPageSize;
+                this.keysUsed = halfPageSize;
                 nullChildren(halfPageSize, halfPageSize);
-                insertChild(key, overFlowId, index);
+                insertChild(key, overFlowId, index-halfPageSize+1);
             }
         }
         else
@@ -344,34 +381,53 @@ public class BPlusPage implements Externalizable
             if (isLeaf) 
             {
                 copyEntries(halfPageSize, newPage, 0, halfPageSize);
+                newPage.keysUsed = halfPageSize;
+                this.keysUsed = halfPageSize;
                 nullEntries(halfPageSize, halfPageSize);
-                newPage.insertEntry(key, data, index);
+                newPage.insertEntry(key, data, index-halfPageSize+1);
             }
             else 
             {
                 copyChildren(halfPageSize, newPage, 0, halfPageSize);
+                newPage.keysUsed = halfPageSize;
+                this.keysUsed = halfPageSize;
                 nullChildren(halfPageSize, halfPageSize);
-                newPage.insertChild(key, overFlowId, index);
+                newPage.insertChild(key, overFlowId, index-halfPageSize+1);
             }
         }
         
         // if this is a leaf, then we need to connect them together
         if (isLeaf)
         {
-            newPage.setPreviousBucketId(thisId);
-            setNextBucketId(newPage.getThisBuckedId());
-            if (nextId != 0)
+            if (nextId != NULL_BUCKET)
             {
                 // if there is a next bucket, then we need to link it
-                BPlusPage nextPage = treeManager.getPageManager().getPage(nextId);
+                BPlusPage nextPage = (BPlusPage) treeManager
+                    .getPageManager()
+                    .getPage(
+                        treeManager.buildPageId(nextId), 
+                        treeManager.getPageSerializer());
+                
                 nextPage.setPreviousBucketId(newPage.getThisBuckedId());
                 newPage.setNextBucketId(nextPage.getThisBuckedId());
-                treeManager.getPageManager().savePage(nextPage);
+                
+                treeManager.getPageManager().savePage(
+                        treeManager.buildPageId(nextPage.thisId),
+                        nextPage, 
+                        treeManager.getPageSerializer());
             }
+            newPage.setPreviousBucketId(thisId);
+            setNextBucketId(newPage.getThisBuckedId());
         }
         
-        treeManager.getPageManager().savePage(this);
-        treeManager.getPageManager().savePage(newPage);
+        treeManager.getPageManager().savePage(
+                treeManager.buildPageId(thisId),
+                this,
+                treeManager.getPageSerializer());
+        treeManager.getPageManager().savePage(
+                treeManager.buildPageId(newPage.thisId), 
+                newPage, 
+                treeManager.getPageSerializer());
         
         result.overflowPage = newPage;
         return result;
@@ -382,7 +438,7 @@ public class BPlusPage implements Externalizable
     {
         DeleteResult result = null;
         int half = treeManager.getRecordsPerPage() >> 1;
-        int index = findFirstGreaterOrEqualChild(key);
+        int index = findFirstLessOrEqualChild(key);
 
         if (isLeaf)
         {
@@ -400,9 +456,11 @@ public class BPlusPage implements Externalizable
         }
         else
         {
-            BPlusPage child = treeManager
+            BPlusPage child = ((BPlusPage) treeManager
                     .getPageManager()
-                    .getPage(childrenPages[index]);
+                    .getPage(
+                        treeManager.buildPageId(children[index]), 
+                        treeManager.getPageSerializer()));
             result = child.delete(key);
             
             keys[index] = child.getKey(0);
@@ -411,9 +469,11 @@ public class BPlusPage implements Externalizable
             {
                 if (index < half)
                 {
-                    BPlusPage brother = treeManager
+                    BPlusPage brother = ((BPlusPage) treeManager
                             .getPageManager()
-                            .getPage(childrenPages[index+1]);
+                            .getPage(
+                                treeManager.buildPageId(children[index + 1]),
+                                treeManager.getPageSerializer()));
                     
                     if (brother.compacityUsed() > half)
                     {
@@ -448,9 +508,18 @@ public class BPlusPage implements Externalizable
                         keys[index] = child.getKey(0);
                         keys[index + 1] = brother.getKey(0);
                         
-                        treeManager.getPageManager().savePage(this);
-                        treeManager.getPageManager().savePage(child);
-                        treeManager.getPageManager().savePage(brother);
+                        treeManager.getPageManager().savePage(
+                                treeManager.buildPageId(this.thisId), 
+                                this, 
+                                treeManager.getPageSerializer());
+                        treeManager.getPageManager().savePage(
+                                treeManager.buildPageId(child.thisId),
+                                child, 
+                                treeManager.getPageSerializer());
+                        treeManager.getPageManager().savePage(
+                                treeManager.buildPageId(brother.thisId), 
+                                brother, 
+                                treeManager.getPageSerializer());
                     }
                     else
                     {
@@ -465,7 +534,10 @@ public class BPlusPage implements Externalizable
                             // this means that something really, really
                             // bad happened, but save what we've done
                             // so far.
-                            treeManager.getPageManager().savePage(this);
+                            treeManager.getPageManager().savePage(
+                                    treeManager.buildPageId(this.thisId), 
+                                    this, 
+                                    treeManager.getPageSerializer());
                             // @TODO statement
                             throw new FledPresistanceException(LanguageStatements.NONE);
                         }
@@ -488,35 +560,55 @@ public class BPlusPage implements Externalizable
                         }
                         
                         this.deleteChild(index);
+                        this.keys[index] = brother.getKey(0);
                         
                         if (child.getPreviousBucketId() != NULL_BUCKET)
                         {
-                            BPlusPage prev = treeManager
+                            BPlusPage prev = (BPlusPage) treeManager
                                     .getPageManager()
-                                    .getPage(child.getPreviousBucketId());
+                                    .getPage(
+                                        treeManager.buildPageId(child.getPreviousBucketId()),
+                                        treeManager.getPageSerializer());
                             prev.setNextBucketId(child.getNextBucketId());
-                            treeManager.getPageManager().savePage(prev);
+                            treeManager.getPageManager().savePage(
+                                    treeManager.buildPageId(prev.thisId),
+                                    prev, 
+                                    treeManager.getPageSerializer());
                         }
                         
                         if (child.getNextBucketId() != NULL_BUCKET)
                         {
-                            BPlusPage next = treeManager
+                            BPlusPage next = (BPlusPage) treeManager
                                     .getPageManager()
-                                    .getPage(child.getNextBucketId());
+                                    .getPage(
+                                        treeManager.buildPageId(child.getNextBucketId()),
+                                        treeManager.getPageSerializer());
                             next.setPreviousBucketId(child.getPreviousBucketId());
-                            treeManager.getPageManager().savePage(next);
+                            treeManager.getPageManager().savePage(
+                                    treeManager.buildPageId(next.thisId),
+                                    next, 
+                                    treeManager.getPageSerializer());
                         }
                         
-                        treeManager.getPageManager().savePage(this);
-                        treeManager.getPageManager().savePage(brother);
-                        treeManager.getPageManager().deletePage(child.getThisBuckedId());
+                        treeManager.getPageManager().savePage(
+                                treeManager.buildPageId(this.thisId), 
+                                this, 
+                                treeManager.getPageSerializer());
+                        treeManager.getPageManager().savePage(
+                                treeManager.buildPageId(brother.thisId), 
+                                brother, 
+                                treeManager.getPageSerializer());
+                        treeManager.getPageManager().deletePage(
+                                treeManager.buildPageId(child.getThisBuckedId()));
                     }
                 }
                 else
                 {
-                    BPlusPage brother = treeManager
+                    BPlusPage brother = (BPlusPage) treeManager
                             .getPageManager()
-                            .getPage(childrenPages[index-1]);
+                            .getPage(
+                                treeManager.buildPageId(children[index-1]), 
+                                treeManager.getPageSerializer());
                     
                     if (brother.compacityUsed() > half)
                     {
@@ -551,9 +643,18 @@ public class BPlusPage implements Externalizable
                         keys[index] = child.getKey(0);
                         keys[index - 1] = brother.getKey(0);
                         
-                        treeManager.getPageManager().savePage(this);
-                        treeManager.getPageManager().savePage(child);
-                        treeManager.getPageManager().savePage(brother);
+                        treeManager.getPageManager().savePage(
+                                treeManager.buildPageId(this.thisId), 
+                                this, 
+                                treeManager.getPageSerializer());
+                        treeManager.getPageManager().savePage(
+                                treeManager.buildPageId(child.thisId),
+                                child, 
+                                treeManager.getPageSerializer());
+                        treeManager.getPageManager().savePage(
+                                treeManager.buildPageId(brother.thisId), 
+                                brother, 
+                                treeManager.getPageSerializer());
                     }
                     else
                     {
@@ -563,7 +664,10 @@ public class BPlusPage implements Externalizable
                             // this means that something really, really
                             // bad happened, but save what we've done
                             // so far.
-                            treeManager.getPageManager().savePage(this);
+                            treeManager.getPageManager().savePage(
+                                    treeManager.buildPageId(this.thisId), 
+                                    this, 
+                                    treeManager.getPageSerializer());
                             // @TODO statement
                             throw new FledPresistanceException(LanguageStatements.NONE);
                         }
@@ -585,31 +689,51 @@ public class BPlusPage implements Externalizable
                         
                         if (child.getPreviousBucketId() != NULL_BUCKET)
                         {
-                            BPlusPage prev = treeManager
+                            BPlusPage prev = (BPlusPage) treeManager
                                     .getPageManager()
-                                    .getPage(child.getPreviousBucketId());
+                                    .getPage(
+                                        treeManager.buildPageId(child.getPreviousBucketId()),
+                                        treeManager.getPageSerializer());
                             prev.setNextBucketId(child.getNextBucketId());
-                            treeManager.getPageManager().savePage(prev);
+                            treeManager.getPageManager().savePage(
+                                    treeManager.buildPageId(prev.thisId),
+                                    prev, 
+                                    treeManager.getPageSerializer());
                         }
                         
                         if (child.getNextBucketId() != NULL_BUCKET)
                         {
-                            BPlusPage next = treeManager
+                            BPlusPage next = (BPlusPage) treeManager
                                     .getPageManager()
-                                    .getPage(child.getNextBucketId());
+                                    .getPage(
+                                        treeManager.buildPageId(child.getNextBucketId()),
+                                        treeManager.getPageSerializer());
                             next.setPreviousBucketId(child.getPreviousBucketId());
-                            treeManager.getPageManager().savePage(next);
+                            treeManager.getPageManager().savePage(
+                                    treeManager.buildPageId(next.thisId),
+                                    next, 
+                                    treeManager.getPageSerializer());
                         }
                         
-                        treeManager.getPageManager().savePage(this);
-                        treeManager.getPageManager().savePage(brother);
-                        treeManager.getPageManager().deletePage(child.getThisBuckedId());
+                        treeManager.getPageManager().savePage(
+                                treeManager.buildPageId(this.thisId), 
+                                this, 
+                                treeManager.getPageSerializer());
+                        treeManager.getPageManager().savePage(
+                                treeManager.buildPageId(brother.thisId), 
+                                brother, 
+                                treeManager.getPageSerializer());
+                        treeManager.getPageManager().deletePage(
+                                treeManager.buildPageId(child.getThisBuckedId()));
                     }
                 }
             }
             else
             {
-                treeManager.getPageManager().savePage(this);
+                treeManager.getPageManager().savePage(
+                        treeManager.buildPageId(this.thisId), 
+                        this,
+                        treeManager.getPageSerializer());
             }
         }
 
@@ -625,25 +749,33 @@ public class BPlusPage implements Externalizable
      * @param key
      * @return 
      */
-    protected int findFirstGreaterOrEqualChild(long key)
+    protected int findFirstLessOrEqualChild(long key)
     {
-        int left = 0;
-        int right = keysUsed;
+        int min = 0;
+        int max = keysUsed - 1;
 
         // do a binary search
-        while(left < right) 
+        while(max > min)
         {
-            int middle = (left + right) / 2;
-            if (keys[middle] < key) 
+            int mid = (max + min) / 2;
+            if (keys[mid] == key)
             {
-                left = middle + 1;
+                return mid;
+            }
+            if (keys[mid] > key) 
+            {
+                max = mid;
             }
             else 
             {
-                right = middle;
+                min = mid + 1;
             }
         }
-        return right;
+        if (keys[max] > key && max > 0)
+        {
+            return max - 1;
+        }
+        return max;
     }
     
     protected void insertEntry(long key, Object value, int insertIndex)
@@ -674,40 +806,92 @@ public class BPlusPage implements Externalizable
                 insertIndex+1, 
                 keysUsed-insertIndex);
         System.arraycopy(
-                childrenPages, 
+                children, 
                 insertIndex,
-                childrenPages, 
+                children, 
                 insertIndex+1, 
                 keysUsed-insertIndex);
         keysUsed++;
         keys[insertIndex] = key;
-        childrenPages[insertIndex] = value;
+        children[insertIndex] = value;
     }
     
     protected void deleteChild(int index)
     {
-        System.arraycopy(keys, index + 1, keys, index, keysUsed - index);
-        System.arraycopy(childrenPages, index + 1, childrenPages, index, keysUsed - index);
+        System.arraycopy(
+                keys, 
+                index + 1, 
+                keys, 
+                index, 
+                keysUsed - index);
+        System.arraycopy(
+                children, 
+                index + 1, 
+                children, 
+                index, 
+                keysUsed - index);
+        keys[keysUsed - 1] = NULL_BUCKET;
+        children[keysUsed - 1] = NULL_BUCKET;
         keysUsed--;
     }
     
     protected void deleteEntry(int index)
     {
-        System.arraycopy(keys, index + 1, keys, index, keysUsed - index);
-        System.arraycopy(values, index + 1, values, index, keysUsed - index);
+        System.arraycopy(
+                keys, 
+                index + 1, 
+                keys, 
+                index, 
+                keysUsed - index);
+        System.arraycopy(
+                values, 
+                index + 1, 
+                values, 
+                index, 
+                keysUsed - index);
+        keys[keysUsed - 1] = NULL_BUCKET;
+        values[keysUsed - 1] = NULL_BUCKET;
         keysUsed--;
     }
     
-    protected void copyEntries(int index, BPlusPage dest, int destIndex, int count)
+    protected void copyEntries(
+            int index, 
+            BPlusPage dest, 
+            int destIndex, 
+            int count)
     {
-        System.arraycopy(keys, index, dest.keys, destIndex, count);
-        System.arraycopy(values, index, dest.values, destIndex, count);
+        System.arraycopy(
+                keys, 
+                index, 
+                dest.keys, 
+                destIndex, 
+                count);
+        System.arraycopy(
+                values, 
+                index, 
+                dest.values, 
+                destIndex, 
+                count);
     }
     
-    protected void copyChildren(int index, BPlusPage dest, int destIndex, int count)
+    protected void copyChildren(
+            int index, 
+            BPlusPage dest, 
+            int destIndex, 
+            int count)
     {
-        System.arraycopy(keys, index, dest.keys, destIndex, count);
-        System.arraycopy(childrenPages, index, dest.childrenPages, destIndex, count);
+        System.arraycopy(
+                keys, 
+                index, 
+                dest.keys, 
+                destIndex, 
+                count);
+        System.arraycopy(
+                children, 
+                index, 
+                dest.children, 
+                destIndex, 
+                count);
     }
     
     protected void nullEntries(int start, int count)
@@ -724,22 +908,113 @@ public class BPlusPage implements Externalizable
         for(int i = start; i < start + count; i++)
         {
             keys[i] = NULL_BUCKET;
-            childrenPages[i] = NULL_BUCKET;
+            children[i] = NULL_BUCKET;
         }
     }
-
-    @Override
-    public void readExternal(ObjectInput in) 
-            throws  IOException, 
-                    ClassNotFoundException 
+    
+    public static class BPlusPageSerializer implements Serializer<ByteBuffer>
     {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
+        private BPlusTree btree;
+        
+        protected BPlusPageSerializer(BPlusTree btree)
+        {
+            this.btree = btree;
+        }
+        
+        @Override
+        public ByteBuffer serialize(Object object) 
+            throws IOException
+        {
+            BPlusPage page = (BPlusPage) object;
+            ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+            ObjectOutputStream out = new ObjectOutputStream(byteOut);
 
-    @Override
-    public void writeExternal(ObjectOutput out)
-            throws IOException 
-    {
-        throw new UnsupportedOperationException("Not supported yet.");
+            out.writeLong(page.thisId);
+            out.writeLong(page.prevId);
+            out.writeLong(page.nextId);
+            out.writeBoolean(page.isLeaf);
+            out.writeInt(page.keysUsed);
+
+            for(int i = 0; i < page.keysUsed; i++)
+            {
+                out.writeLong(page.keys[i]);
+            }
+
+            for(int i = 0; i < page.keysUsed; i++)
+            {
+                if (page.isLeaf)
+                {
+                    byte[] serialized = btree
+                            .getValueSerializer()
+                            .serialize(page.values[i]);
+                    out.writeInt(serialized.length);
+                    out.write(serialized);
+                }
+                else
+                {
+                    out.writeLong(page.children[i]);
+                }
+            }
+
+            ByteBuffer buffer = ByteBuffer.allocate(byteOut.size());
+            buffer.put(byteOut.toByteArray());
+            buffer.position(0);
+            return buffer;
+        }
+
+        @Override
+        public Object deserialize(ByteBuffer buffer) 
+                throws IOException
+        {
+            BPlusPage result = new BPlusPage();
+            result.treeManager = btree;
+            
+            byte[] bytes = new byte[buffer.capacity()];
+            buffer.get(bytes);
+            ByteArrayInputStream _buffer = new ByteArrayInputStream(bytes);
+            ObjectInputStream in = new ObjectInputStream(_buffer);
+
+            result.thisId = in.readLong();
+            result.prevId = in.readLong();
+            result.nextId = in.readLong();
+            result.isLeaf = in.readBoolean();
+            result.keysUsed = in.readInt();
+
+            result.keys = new long[btree.getRecordsPerPage()];
+            if (result.isLeaf)
+            {
+                result.values = new Object[btree.getRecordsPerPage()];
+            }
+            else
+            {
+                result.children = new long[btree.getRecordsPerPage()];
+            }
+
+            for(int i = 0; i < result.keysUsed; i++)
+            {
+                result.keys[i] = in.readLong();
+            }
+
+            for(int i = 0; i < result.keysUsed; i++)
+            {
+                if (result.isLeaf)
+                {
+                    int objectSize = in.readInt();
+                    byte[] deserialized = new byte[objectSize];
+                    in.read(deserialized);
+                    result.values[i] = btree
+                            .getValueSerializer()
+                            .deserialize(deserialized);
+                }
+                else
+                {
+                    result.children[i] = in.readLong();
+                }
+            }
+
+            return result;
+        }
     }
+    
+    
 }
