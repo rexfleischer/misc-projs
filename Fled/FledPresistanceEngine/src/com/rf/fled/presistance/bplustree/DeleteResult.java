@@ -8,9 +8,6 @@ package com.rf.fled.presistance.bplustree;
  *
  * @author REx
  */
-public class DeleteResult 
-{
-    public boolean underflow;
+public class DeleteResult {
     
-    public Object removedValue;
 }

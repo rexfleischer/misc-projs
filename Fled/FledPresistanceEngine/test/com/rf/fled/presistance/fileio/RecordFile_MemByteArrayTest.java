@@ -4,6 +4,7 @@
  */
 package com.rf.fled.presistance.fileio;
 
+import com.rf.fled.presistance.RecordFile_MemByteArray;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -150,6 +151,10 @@ public class RecordFile_MemByteArrayTest {
         
         instance.insert("new over here".getBytes(), 1);
         
+        assertEquals("new object", new String(instance.read(0)));
         assertEquals("new over here", new String(instance.read(1)));
+        assertEquals("well, hello mr. poopy", new String(instance.read(2)));
+        assertEquals("new object skjfdlksjf", new String(instance.read(3)));
+        assertEquals("well, hello mr. poopy lkfsjdlfkjs", new String(instance.read(4)));
     }
 }

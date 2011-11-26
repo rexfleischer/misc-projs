@@ -4,6 +4,7 @@
  */
 package com.rf.fled.presistance.util;
 
+import com.rf.fled.presistance.ByteArray;
 import java.nio.ByteBuffer;
 import org.junit.After;
 import org.junit.AfterClass;

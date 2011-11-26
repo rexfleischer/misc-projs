@@ -4,6 +4,7 @@
  */
 package com.rf.fled.config;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -16,9 +17,12 @@ public class FledPropertiesFactory
 {
     private static Map<String, FledProperties> properties;
     
+    private static String filedir = "C:/Users/REx/Desktop/fledhome/conf/";
+    
     static 
     {
         properties = new HashMap<String, FledProperties>();
+        //filedir = System.getProperty("user.dir");
     }
     
     public static FledProperties getProperties(String set) 
@@ -31,7 +35,7 @@ public class FledPropertiesFactory
             if (result == null)
             {
                 result = new FledProperties();
-                result.load(FledPropertiesFactory.class.getResourceAsStream(set));
+                result.load(new FileInputStream(filedir + set + ".properties"));
                 properties.put(set, result);
             }
         }

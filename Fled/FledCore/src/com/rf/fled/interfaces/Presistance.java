@@ -4,8 +4,8 @@
  */
 package com.rf.fled.interfaces;
 
-import com.rf.fled.interfaces.Browser;
 import com.rf.fled.exceptions.FledPresistanceException;
+import com.rf.fled.exceptions.FledTransactionException;
 import com.rf.fled.util.Pair;
 
 /**
@@ -35,4 +35,16 @@ public interface Presistance
     
     public Browser<Pair<Long, Object>> browse()
             throws FledPresistanceException;
+    
+    public long size()
+            throws FledPresistanceException;
+    
+    public void beginTransaction()
+            throws FledTransactionException;
+    
+    public void commit()
+            throws FledTransactionException;
+    
+    public void rollback()
+            throws FledTransactionException;
 }

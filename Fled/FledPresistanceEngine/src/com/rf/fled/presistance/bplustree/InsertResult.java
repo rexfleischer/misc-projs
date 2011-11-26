@@ -10,7 +10,6 @@ package com.rf.fled.presistance.bplustree;
  */
 public class InsertResult 
 {
-    public BPlusPage overflowPage;
+    Object existing;
     
-    public Object existing;
 }
