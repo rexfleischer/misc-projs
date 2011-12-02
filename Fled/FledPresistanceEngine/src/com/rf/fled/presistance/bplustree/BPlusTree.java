@@ -6,8 +6,8 @@ package com.rf.fled.presistance.bplustree;
 
 import com.rf.fled.exceptions.FledPresistanceException;
 import com.rf.fled.exceptions.FledTransactionException;
-import com.rf.fled.interfaces.Browser;
-import com.rf.fled.interfaces.Presistance;
+import com.rf.fled.presistance.Browser;
+import com.rf.fled.presistance.Presistance;
 import com.rf.fled.interfaces.Serializer;
 import com.rf.fled.language.LanguageStatements;
 import com.rf.fled.presistance.FileManager;

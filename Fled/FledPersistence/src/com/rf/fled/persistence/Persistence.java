@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.rf.fled.interfaces;
+package com.rf.fled.persistence;
 
 import com.rf.fled.exceptions.FledPresistanceException;
 import com.rf.fled.exceptions.FledTransactionException;
@@ -12,7 +12,7 @@ import com.rf.fled.util.Pair;
  *
  * @author REx
  */
-public interface Presistance
+public interface Persistence
 {
     /**
      * does an insert at a specific id
@@ -37,6 +37,9 @@ public interface Presistance
             throws FledPresistanceException;
     
     public long size()
+            throws FledPresistanceException;
+    
+    public String getContext()
             throws FledPresistanceException;
     
     public void beginTransaction()

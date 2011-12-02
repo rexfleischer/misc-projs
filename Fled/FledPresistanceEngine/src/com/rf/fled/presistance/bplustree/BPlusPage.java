@@ -4,7 +4,7 @@
  */
 package com.rf.fled.presistance.bplustree;
 
-import com.rf.fled.interfaces.Browser;
+import com.rf.fled.presistance.Browser;
 import com.rf.fled.presistance.RecordFile;
 import com.rf.fled.util.Pair;
 import java.io.IOException;
