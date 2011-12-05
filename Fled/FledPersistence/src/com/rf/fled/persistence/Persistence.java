@@ -4,8 +4,6 @@
  */
 package com.rf.fled.persistence;
 
-import com.rf.fled.exceptions.FledPresistanceException;
-import com.rf.fled.exceptions.FledTransactionException;
 import com.rf.fled.util.Pair;
 
 /**
@@ -49,5 +47,12 @@ public interface Persistence
             throws FledTransactionException;
     
     public void rollback()
+            throws FledTransactionException;
+    
+    /**
+     * truncate deletes the data but not the actual persistence manager
+     * @throws FledTransactionException 
+     */
+    public void truncate()
             throws FledTransactionException;
 }

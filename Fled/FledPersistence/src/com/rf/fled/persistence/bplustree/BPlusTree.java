@@ -4,12 +4,12 @@
  */
 package com.rf.fled.persistence.bplustree;
 
-import com.rf.fled.exceptions.FledIOException;
-import com.rf.fled.exceptions.FledPresistanceException;
-import com.rf.fled.exceptions.FledTransactionException;
+import com.rf.fled.persistence.FledPresistanceException;
+import com.rf.fled.persistence.FledTransactionException;
 import com.rf.fled.persistence.Browser;
 import com.rf.fled.interfaces.Serializer;
 import com.rf.fled.language.LanguageStatements;
+import com.rf.fled.persistence.fileio.ByteSerializer;
 import com.rf.fled.persistence.FileManager;
 import com.rf.fled.persistence.Persistence;
 import com.rf.fled.persistence.Transactionable;
@@ -29,8 +29,6 @@ import java.io.ObjectOutputStream;
  */
 public class BPlusTree implements Persistence, Transactionable, Externalizable
 {
-    public static final String EXTENSION = "btree";
-    
     public static final Integer NULL_PAGE = 0;
     
     public static final Integer DEFAULT_RECORD_COUNT = 16;
@@ -43,6 +41,8 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
     
     protected int maxRecords;
     
+    protected int height;
+    
     private String context;
     
     private long count;
@@ -52,7 +52,7 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
     public static BPlusTree createBPlusTree(
             FileManager fileManager,
             String treeName)
-            throws FledIOException
+            throws FledPresistanceException
     {
         return createBPlusTree(fileManager, treeName, DEFAULT_RECORD_COUNT, null, null);
     }
@@ -63,7 +63,7 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
             int recordsPerPage,
             Serializer<byte[]> valueSerailizer,
             Serializer<byte[]> pageSerializer)
-            throws FledIOException
+            throws FledPresistanceException
     {
         if (fileManager == null)
         {
@@ -102,7 +102,7 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
     public static BPlusTree loadBPlusTree(
             FileManager fileManager, 
             String treeName) 
-            throws FledIOException
+            throws FledPresistanceException
     {
         BPlusTree result = (BPlusTree) fileManager.loadNamedFile(treeName, null);
         result.fileManager = fileManager;
@@ -222,6 +222,7 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
                     BPlusPage newRoot = new BPlusPage(
                             this, rootPage, result.overflowPage);
                     root = newRoot.getThisId();
+                    height++;
                     dirty = true;
                 }
                 
@@ -253,6 +254,11 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
         try
         {
             BPlusPage rootPage = getRoot();
+            if (rootPage == null)
+            {
+                // basically, the tree is empty
+                return null;
+            }
             
             DeleteResult result = rootPage.delete(id);
             boolean dirty = false;
@@ -262,12 +268,18 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
                 dirty = true;
                 if (rootPage.size() == 1)
                 {
-                    root = rootPage.getChildId(0);
+                    if (!rootPage.isLeaf)
+                    {
+                        root = rootPage.getChildId(0);
+                        deletePage(rootPage);
+                    }
                 }
                 else
                 {
                     root = NULL_PAGE;
+                    deletePage(rootPage);
                 }
+                height--;
             }
             
             if (result.removedValue != null)
@@ -311,18 +323,51 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
         throw new UnsupportedOperationException();
     }
     
-    void savePage(BPlusPage page) throws FledIOException
+    void savePage(BPlusPage page) throws FledPresistanceException
     {
         fileManager.updateFile(page.thisId, page, pageSerializer);
     }
 
-    void deletePage(BPlusPage child) throws FledIOException 
+    void deletePage(BPlusPage child) 
+            throws FledPresistanceException 
     {
         fileManager.deleteFile(child.thisId);
     }
+    
+    byte[] serializeValue(Object value) throws IOException
+    {
+        if (this.valueSerailizer == null)
+        {
+            return ByteSerializer.serialize(value);
+        }
+        else
+        {
+            return this.valueSerailizer.serialize(value);
+        }
+    }
+    
+    Object deserializeValue(byte[] data) 
+            throws IOException
+    {
+        if (this.valueSerailizer == null)
+        {
+            try
+            {
+                return ByteSerializer.deserialize(data);
+            }
+            catch(Exception ex)
+            {
+                throw new IOException(ex);
+            }
+        }
+        else
+        {
+            return this.valueSerailizer.deserialize(data);
+        }
+    }
 
     BPlusPage loadPage(long id) 
-            throws FledIOException 
+            throws FledPresistanceException 
     {
         BPlusPage page = (BPlusPage) fileManager.loadFile(id, pageSerializer);
         if (page == null)
@@ -334,8 +379,8 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
         return page;
     }
     
-    private BPlusPage getRoot() 
-            throws FledIOException
+    protected BPlusPage getRoot() 
+            throws FledPresistanceException
     {
         if (root == BPlusTree.NULL_PAGE)
         {
@@ -345,9 +390,38 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
     }
 
     @Override
+    public void truncate() 
+            throws FledTransactionException 
+    {
+        try
+        {
+            BPlusPage rootPage = getRoot();
+            if (rootPage == null)
+            {
+                return;
+            }
+            rootPage.truncate(height);
+        }
+        catch(Exception ex)
+        {
+            // @TODO statement
+            throw new FledTransactionException(LanguageStatements.NONE, ex);
+        }
+    }
+
+    @Override
     public Transactionable deepCopy(FileManager newManager) 
     {
-        throw new UnsupportedOperationException("Not supported yet.");
+        BPlusTree result = new BPlusTree();
+        result.valueSerailizer  = valueSerailizer;
+        result.pageSerializer   = pageSerializer;
+        result.fileManager      = newManager;
+        result.maxRecords       = maxRecords;
+        result.height           = height;
+        result.context          = context;
+        result.count            = count;
+        result.root             = root;
+        return result;
     }
     
     @Override
@@ -360,6 +434,7 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
         count           = in.readLong();
         root            = in.readLong();
         maxRecords      = in.readInt();
+        height          = in.readInt();
     }
 
     @Override
@@ -372,6 +447,7 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
         out.writeLong(count);
         out.writeLong(root);
         out.writeInt(maxRecords);
+        out.writeInt(height);
     }
     
     public static class DefaultValueSerializer implements Serializer<byte[]>
@@ -424,5 +500,32 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
             }
             return result;
         }
+    }
+    
+    public void assertOrder(int tolerance) throws Exception
+    {
+        BPlusPage rootPage = getRoot();
+        if (rootPage != null)
+        {
+            rootPage.assertOrder(null, tolerance);
+        }
+    }
+    
+    public void dump() throws Exception
+    {
+        BPlusPage rootPage = getRoot();
+        if (rootPage != null)
+        {
+            rootPage.dumpRecursive(0);
+        }
+    }
+    
+    public void assertValues() throws Exception
+    {
+        BPlusPage rootPage = getRoot();
+        if (rootPage != null)
+        {
+            rootPage.assertValues();
+        } 
     }
 }

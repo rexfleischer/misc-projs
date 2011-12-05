@@ -2,8 +2,9 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.rf.fled.persistence;
+package com.rf.fled.persistence.fileio;
 
+import com.rf.fled.persistence.fileio.RecordFile;
 import junit.framework.Assert;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -302,5 +303,76 @@ public class RecordFileTest {
         Assert.assertEquals(first, new String(instance.read(0)));
         Assert.assertEquals(second, new String(instance.read(1)));
         Assert.assertEquals(third, new String(instance.read(2)));
+    }
+    
+    @Test
+    public void copyEntriesFromOneToAnother() throws Exception {
+        System.out.println("copyEntriesFromOneToAnother");
+        RecordFile instance = new RecordFile();
+        RecordFile dest     = new RecordFile();
+        
+        String first = "hello";
+        String second = "hello 2";
+        String third = "hello 3";
+        String meta = "hello, I'm meta!";
+        
+        instance.setMeta(meta.getBytes());
+        instance.write(first.getBytes(), 0);
+        instance.write(second.getBytes(), 1);
+        instance.write(third.getBytes(), 2);
+        
+        for(int i = 0; i < 3; i++)
+        {
+            dest.insert(instance.read(instance.compacityUsed() - 1), 0);
+            instance.remove(instance.compacityUsed() - 1);
+        }
+        
+        Assert.assertEquals(first, new String(dest.read(0)));
+        Assert.assertEquals(second, new String(dest.read(1)));
+        Assert.assertEquals(third, new String(dest.read(2)));
+        
+        instance = new RecordFile();
+        dest     = new RecordFile();
+        for(int i = 0; i < 16; i++)
+        {
+            MockValue value = new MockValue();
+            value.id = (long)(i + 1);
+            value.content = "hello world number " + (i + 1);
+            instance.write(ByteSerializer.serialize(value), i);
+        }
+        for(int i = 0; i < 8; i++)
+        {
+            dest.insert(instance.read(instance.compacityUsed() - 1), 0);
+            instance.remove(instance.compacityUsed() - 1);
+        }
+        
+        Assert.assertEquals(8, instance.compacityUsed());
+        Assert.assertEquals(8, dest.compacityUsed());
+        
+        for(int i = 0; i < 8; i++)
+        {
+            MockValue expected = new MockValue();
+            expected.id = (long)(i + 1);
+            expected.content = "hello world number " + (i + 1);
+            
+            MockValue actual = (MockValue) ByteSerializer
+                    .deserialize(instance.read(i));
+            
+            Assert.assertEquals(expected.id, actual.id);
+            Assert.assertEquals(expected.content, actual.content);
+        }
+        
+        for(int i = 0; i < 8; i++)
+        {
+            MockValue expected = new MockValue();
+            expected.id = (long)(i + 9);
+            expected.content = "hello world number " + (i + 9);
+            
+            MockValue actual = (MockValue) ByteSerializer
+                    .deserialize(dest.read(i));
+            
+            Assert.assertEquals(expected.id, actual.id);
+            Assert.assertEquals(expected.content, actual.content);
+        }
     }
 }

@@ -2,11 +2,10 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.rf.fled.persistence.fileio;
+package com.rf.fled.persistence.filemanager;
 
-import com.rf.fled.exceptions.FledIOException;
-import com.rf.fled.exceptions.FledPresistanceException;
-import com.rf.fled.exceptions.FledTransactionException;
+import com.rf.fled.persistence.FledPresistanceException;
+import com.rf.fled.persistence.FledTransactionException;
 import com.rf.fled.language.LanguageStatements;
 import com.rf.fled.persistence.Browser;
 import com.rf.fled.persistence.FileManager;
@@ -52,53 +51,29 @@ public class TransactionPersistence implements Persistence
             // @TODO statement
             throw new FledTransactionException(LanguageStatements.NONE);
         }
-        try 
-        {
-            FileManager transaction = parent.getRight().beginTransaction();
-            Persistence presistance = (Persistence) 
-                    ((Transactionable) parent.getLeft()).deepCopy(transaction);
-            
-            transactions.put(Thread.currentThread(), 
-                    new Pair<Persistence, FileManager>(presistance, transaction));
-        }
-        catch (FledIOException ex) 
-        {
-            // @TODO statement
-            throw new FledTransactionException(LanguageStatements.NONE, ex);
-        }
+        FileManager transaction = parent.getRight().beginTransaction();
+        Persistence presistance = (Persistence) 
+                ((Transactionable) parent.getLeft()).deepCopy(transaction);
+
+        transactions.put(Thread.currentThread(), 
+                new Pair<Persistence, FileManager>(presistance, transaction));
     }
 
     @Override
     public void commit() 
             throws FledTransactionException 
     {
-        try 
-        {
-            Pair<Persistence, FileManager> committing = 
-                    transactions.remove(Thread.currentThread());
-            committing.getRight().commit();
-            parent = committing;
-        } 
-        catch (FledIOException ex) 
-        {
-            // @TODO statement
-            throw new FledTransactionException(LanguageStatements.NONE, ex);
-        }
+        Pair<Persistence, FileManager> committing = 
+                transactions.remove(Thread.currentThread());
+        committing.getRight().commit();
+        parent = committing;
     }
 
     @Override
     public void rollback()
             throws FledTransactionException 
     {
-        try 
-        {
-            transactions.remove(Thread.currentThread()).getRight().rollback();
-        } 
-        catch (FledIOException ex) 
-        {
-            // @TODO statement
-            throw new FledTransactionException(LanguageStatements.NONE, ex);
-        }
+        transactions.remove(Thread.currentThread()).getRight().rollback();
     }
 
     @Override
@@ -149,5 +124,11 @@ public class TransactionPersistence implements Persistence
     {
         return getTransaction().getLeft().size();
     }
-    
+
+    @Override
+    public void truncate() 
+            throws FledTransactionException 
+    {
+        throw new UnsupportedOperationException("not supported with transactions");
+    }
 }

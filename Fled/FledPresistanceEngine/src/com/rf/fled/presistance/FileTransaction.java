@@ -4,7 +4,7 @@
  */
 package com.rf.fled.presistance;
 
-import com.rf.fled.exceptions.FledTransactionException;
+import com.rf.fled.persistence.FledTransactionException;
 import com.rf.fled.language.LanguageStatements;
 import java.io.IOException;
 import java.util.HashMap;

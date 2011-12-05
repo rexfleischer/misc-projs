@@ -4,8 +4,7 @@
  */
 package com.rf.fled.persistence.bplustree;
 
-import com.rf.fled.exceptions.FledIOException;
-import com.rf.fled.exceptions.FledPresistanceException;
+import com.rf.fled.persistence.FledPresistanceException;
 import com.rf.fled.language.LanguageStatements;
 import com.rf.fled.persistence.Browser;
 import com.rf.fled.util.Pair;
@@ -95,16 +94,7 @@ public class BPlusBrowser implements Browser<Pair<Long, Object>>
                 return false;
             }
             
-            try 
-            {
-                // get the next page
-                page = bplustree.loadPage(page.getNextId());
-            } 
-            catch (FledIOException ex)
-            {
-                // @TODO statement
-                throw new FledPresistanceException(LanguageStatements.NONE, ex);
-            }
+            page = bplustree.loadPage(page.getNextId());
             
             if (page == null)
             {
@@ -143,15 +133,7 @@ public class BPlusBrowser implements Browser<Pair<Long, Object>>
             {
                 return false;
             }
-            try 
-            {
-                page = bplustree.loadPage(page.getPrevId());
-            } 
-            catch (FledIOException ex) 
-            {
-                // @TODO statement
-                throw new FledPresistanceException(LanguageStatements.NONE, ex);
-            }
+            page = bplustree.loadPage(page.getPrevId());
             
             if (page == null)
             {

@@ -4,8 +4,6 @@
  */
 package com.rf.fled.persistence;
 
-import com.rf.fled.exceptions.FledPresistanceException;
-
 /**
  *
  * @author REx

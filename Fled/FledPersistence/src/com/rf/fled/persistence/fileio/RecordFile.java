@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.rf.fled.persistence;
+package com.rf.fled.persistence.fileio;
 
 /**
  * the order in the file goes as such
@@ -183,7 +183,7 @@ public class RecordFile
         {
             throw new ArrayIndexOutOfBoundsException();
         }
-        if (isFull())
+        if (isFull() && index == blocksUsed)
         {
             throw new IllegalStateException("overflow");
         }
@@ -252,12 +252,13 @@ public class RecordFile
         {
             blockStarts[index] = bytes.compacityUsed();
             bytes.insert(src, bytes.compacityUsed());
+            bytes.writeInt(blockStarts[index], blockStartPos(index));
         }
         else
         {
             bytes.insert(src, blockStarts[index]);
             
-            for(int i = blocksUsed+1; i > index; i--)
+            for(int i = blocksUsed; i > index; i--)
             {
                 blockStarts[i] = blockStarts[i-1]+src.length;
                 bytes.writeInt(blockStarts[i], blockStartPos(i));

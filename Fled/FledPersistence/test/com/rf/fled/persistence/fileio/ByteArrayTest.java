@@ -2,8 +2,9 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.rf.fled.persistence;
+package com.rf.fled.persistence.fileio;
 
+import com.rf.fled.persistence.fileio.ByteArray;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;

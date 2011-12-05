@@ -2,8 +2,9 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.rf.fled.exceptions;
+package com.rf.fled.persistence;
 
+import com.rf.fled.exceptions.FledException;
 import com.rf.fled.language.LanguageStatements;
 
 /**

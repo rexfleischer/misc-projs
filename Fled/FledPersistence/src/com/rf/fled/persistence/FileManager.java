@@ -4,8 +4,6 @@
  */
 package com.rf.fled.persistence;
 
-import com.rf.fled.exceptions.FledIOException;
-import com.rf.fled.exceptions.FledTransactionException;
 import com.rf.fled.interfaces.Serializer;
 
 /**
@@ -17,34 +15,34 @@ public interface FileManager
     public static final String EXTENSION = "db";
     
     public FileManager beginTransaction()
-            throws FledIOException;
+            throws FledTransactionException;
     
     public void commit()
-            throws FledIOException, FledTransactionException;
+            throws FledTransactionException;
     
     public void rollback()
-            throws FledIOException;
+            throws FledTransactionException;
     
     public Object loadFile(long id, Serializer<byte[]> serializer)
-            throws FledIOException;
+            throws FledPresistanceException;
     
     public void updateFile(long id, Object data, Serializer<byte[]> serializer)
-            throws FledIOException;
+            throws FledPresistanceException;
     
     public long saveFile(Object data, Serializer<byte[]> serializer)
-            throws FledIOException;
+            throws FledPresistanceException;
     
     public void deleteFile(long id)
-            throws FledIOException;
+            throws FledPresistanceException;
     
     public Object loadNamedFile(String name, Serializer<byte[]> serializer)
-            throws FledIOException;
+            throws FledPresistanceException;
     
     public void saveNamedFile(String name, Object data, Serializer<byte[]> serializer)
-            throws FledIOException;
+            throws FledPresistanceException;
     
     public void deleteNamedFile(String name)
-            throws FledIOException;
+            throws FledPresistanceException;
     
     long incFileCount();
 }

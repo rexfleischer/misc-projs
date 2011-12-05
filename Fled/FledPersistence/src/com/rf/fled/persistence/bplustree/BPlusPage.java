@@ -4,13 +4,12 @@
  */
 package com.rf.fled.persistence.bplustree;
 
-import com.rf.fled.exceptions.FledIOException;
-import com.rf.fled.exceptions.FledPresistanceException;
+import com.rf.fled.persistence.FledPresistanceException;
 import com.rf.fled.interfaces.Serializer;
 import com.rf.fled.language.LanguageStatements;
 import com.rf.fled.persistence.Browser;
-import com.rf.fled.persistence.ByteArray;
-import com.rf.fled.persistence.RecordFile;
+import com.rf.fled.persistence.fileio.ByteArray;
+import com.rf.fled.persistence.fileio.RecordFile;
 import com.rf.fled.util.Pair;
 import java.io.IOException;
 
@@ -20,8 +19,6 @@ import java.io.IOException;
  */
 public class BPlusPage 
 {
-    public static final String EXTENSION = "bpage";
-    
     private RecordFile bytes;
     
     protected BPlusTree bplustree;
@@ -43,9 +40,9 @@ public class BPlusPage
         array.writeLong(prevId, 8);
         array.writeBoolean(isLeaf, 16);
         array.writeInt(keys.length, 17);
-        for(int i = 0; i < bytes.compacityUsed(); i++)
+        for(int i = 0; i < bytes.compacity(); i++)
         {
-            array.writeLong(keys[i], 21 + 8 * i);
+            array.writeLong(keys[i], 22 + 8 * i);
         }
         return array.copyUsedBytes();
     }
@@ -57,9 +54,9 @@ public class BPlusPage
         prevId = array.readLong(8);
         isLeaf = array.readBoolean(16);
         keys = new long[array.readInt(17)];
-        for(int i = 0; i < bytes.compacityUsed(); i++)
+        for(int i = 0; i < bytes.compacity(); i++)
         {
-            keys[i] = array.readLong(21 + 8 * i);
+            keys[i] = array.readLong(22 + 8 * i);
         }
     }
 
@@ -70,7 +67,7 @@ public class BPlusPage
      * @param record 
      */
     BPlusPage(BPlusTree bplustree, long id, Object record) 
-            throws FledIOException, IOException 
+            throws IOException, FledPresistanceException 
     {
         this.isLeaf = true;
         this.bplustree = bplustree;
@@ -92,7 +89,7 @@ public class BPlusPage
      * @param overflowPage 
      */
     BPlusPage(BPlusTree bplustree, BPlusPage rootPage, BPlusPage overflowPage) 
-            throws FledIOException
+            throws IOException, FledPresistanceException
     {
         this.isLeaf = false;
         this.bplustree = bplustree;
@@ -114,7 +111,7 @@ public class BPlusPage
      * @param isLeaf 
      */
     BPlusPage(BPlusTree bplustree, boolean isLeaf) 
-            throws FledIOException
+            throws IOException, FledPresistanceException
     {
         this.isLeaf = isLeaf;
         this.bplustree = bplustree;
@@ -162,29 +159,6 @@ public class BPlusPage
         return (index >= 0) && (index < bytes.compacityUsed());
     }
 
-    Long getKey(int index) 
-    {
-        return keys[index];
-    }
-
-    long getChildId(int index) 
-    {
-        byte[] raw = bytes.read(index);
-        if (raw.length != 8)
-        {
-            return BPlusTree.NULL_PAGE;
-        }
-        return 
-            (((long)(raw[0]) << 56) |
-             ((long)(raw[1]) << 48) |
-             ((long)(raw[2]) << 40) |
-             ((long)(raw[3]) << 32) |
-             ((long)(raw[4]) << 24) |
-             ((long)(raw[5]) << 16) |
-             ((long)(raw[6]) <<  8) |
-             ((long)(raw[7])));
-    }
-
     byte[] getValue(int index)
     {
         return bytes.read(index);
@@ -195,7 +169,8 @@ public class BPlusPage
         return bytes.compacityUsed();
     }
 
-    Browser<Pair<Long, Object>> browse() throws FledIOException
+    Browser<Pair<Long, Object>> browse() 
+            throws IOException, FledPresistanceException
     {
         if (isLeaf)
         {
@@ -207,7 +182,8 @@ public class BPlusPage
         }
     }
 
-    Browser<Pair<Long, Object>> browse(long id) throws FledIOException 
+    Browser<Pair<Long, Object>> browse(long id) 
+            throws FledPresistanceException, IOException 
     {
         int index = findFirstLessOrEqualChild(id);
         if (isLeaf)
@@ -220,24 +196,15 @@ public class BPlusPage
         }
     }
 
-    Object select(long id) throws FledIOException 
+    Object select(long id)
+            throws FledPresistanceException, IOException 
     {
         int index = findFirstLessOrEqualChild(id);
         if (isLeaf)
         {
             if (keys[index] == id)
             {
-                try
-                {
-                    return bplustree
-                            .valueSerailizer
-                            .deserialize(bytes.read(index));
-                }
-                catch(Exception ex)
-                {
-                    // @TODO statement
-                    throw new FledIOException(LanguageStatements.NONE, ex);
-                }
+                return bplustree.deserializeValue(bytes.read(index));
             }
             return null;
         }
@@ -248,7 +215,7 @@ public class BPlusPage
     }
 
     InsertResult insert(long key, Object record, boolean replace) 
-            throws IOException, FledIOException 
+            throws IOException, FledPresistanceException
     {
         long overFlowId = BPlusTree.NULL_PAGE;
         InsertResult result;
@@ -264,13 +231,11 @@ public class BPlusPage
                 // replacing the key
                 
                 // for returning stuff and things
-                result.existing = bplustree
-                        .valueSerailizer
-                        .deserialize(getValue(index));
+                result.existing = bplustree.deserializeValue(getValue(index));
                 
                 if (replace)
                 {
-                    bytes.write(bplustree.valueSerailizer.serialize(record), index);
+                    bytes.write(bplustree.serializeValue(record), index);
                     bplustree.savePage(this);
                 }
                 return result;
@@ -281,18 +246,23 @@ public class BPlusPage
             BPlusPage child = bplustree.loadPage(getChildId(index));
             result = child.insert(key, record, replace);
             
+            // return if there is a exiting value because that means
+            // that we found an existing key meaning we dont
+            // have to reform anything
             if (result.existing != null)
             {
-                // return if there is a exiting value because that means
-                // that we found an existing key meaning we dont
-                // have to reform anything
                 return result;
             }
             
+            // this means there was an insert, but no overflow,
+            // so we dont have to reform anything
             if (result.overflowPage == null)
             {
-                // this means there was an insert, but no overflow,
-                // so we dont have to reform anything
+                if (keys[index] != child.getKey(0))
+                {
+                    keys[index] = child.getKey(0);
+                    bplustree.savePage(this);
+                }
                 return result;
             }
             
@@ -306,6 +276,8 @@ public class BPlusPage
             key = result.overflowPage.getKey(0);
             overFlowId = result.overflowPage.thisId;
             
+            keys[index] = child.getKey(0);
+            
             // clear this because this is a recursive implementation of this
             // algorithm, so we dont want to trick the previous calls
             result.overflowPage = null;
@@ -317,13 +289,34 @@ public class BPlusPage
             // to split this page
             if (isLeaf)
             {
-                insertEntry(key, record, index+1);
+                // special case to when the index is 0, but
+                // sense the +1 is there for general inserst,
+                // it never gets placed in the zeroith place
+                // even if it should be
+                if (key < keys[0])
+                {
+                    insertEntry(key, record, 0);
+                }
+                else
+                {
+                    insertEntry(key, record, index+1);
+                }
+//                insertEntry(key, record, index+1);
             }
             else
             {
-                insertChild(key, overFlowId, index+1);
+                if (key < keys[0])
+                {
+                    insertChild(key, overFlowId, 0);
+                }
+                else
+                {
+                    insertChild(key, overFlowId, index+1);
+                }
+//                insertChild(key, overFlowId, index+1);
             }
             
+            bplustree.savePage(this);
             return result;
         }
         
@@ -332,47 +325,68 @@ public class BPlusPage
         int halfPageSize = bplustree.maxRecords >> 1;
         BPlusPage newPage = new BPlusPage(bplustree, isLeaf);
         
+        // move half the data over to the new page
+        System.arraycopy(this.keys, halfPageSize, newPage.keys, 0, halfPageSize);
+        for(int i = 0; i < halfPageSize; i++)
+        {
+            newPage.bytes.insert(this.bytes.read(this.bytes.compacityUsed() - 1), 0);
+            this.bytes.remove(this.bytes.compacityUsed() - 1);
+            this.keys[halfPageSize + i] = BPlusTree.NULL_PAGE;
+        }
+        
         // basically, if the new insert is in the bottom half, then its
         // going there.. but if its in the upper half, then its going there
         if (index < halfPageSize)
         {
-            // we need to move the entries (plus the new one) to the overflow
-            // page. to do this we need to look at how we are going to do this:
-            // 
-            // with 10 entries, plus the new one, the transform is as such
-            // this page before:    ||||||||||
-            // now, this is-->
-            // this page after:     |||N||----
-            // overflow page:       |||||-----
-            //
-            // the algorithm works for child and enteries
+            // means we put it 'this' page
             if (isLeaf)
             {
-                moveValues(halfPageSize, newPage, 0, halfPageSize);
-                insertEntry(key, record, index-halfPageSize+1);
+                if (key < keys[0])
+                {
+                    insertEntry(key, record, 0);
+                }
+                else
+                {
+                    insertEntry(key, record, index+1);
+                }
             }
             else
             {
-                moveValues(halfPageSize, newPage, 0, halfPageSize);
-                insertChild(key, overFlowId, index-halfPageSize+1);
+                if (key < keys[0])
+                {
+                    insertChild(key, overFlowId, 0);
+                }
+                else
+                {
+                    insertChild(key, overFlowId, index+1);
+                }
             }
         }
         else
         {
-            // with 10 entries, plus the new one, the transform is as such
-            // this page before:    ||||||||||
-            // now, this is-->
-            // this page after:     |||||----
-            // overflow page:       |||N||-----
-            if (isLeaf) 
+            // means we put it in the new page
+            index = newPage.findFirstLessOrEqualChild(key);
+            if (isLeaf)
             {
-                moveValues(halfPageSize, newPage, 0, halfPageSize);
-                newPage.insertEntry(key, record, index-halfPageSize+1);
+                if (key < newPage.keys[0])
+                {
+                    newPage.insertEntry(key, record, 0);
+                }
+                else
+                {
+                    newPage.insertEntry(key, record, index+1);
+                }
             }
-            else 
+            else
             {
-                moveValues(halfPageSize, newPage, 0, halfPageSize);
-                newPage.insertChild(key, overFlowId, index-halfPageSize+1);
+                if (key < keys[0])
+                {
+                    newPage.insertChild(key, overFlowId, 0);
+                }
+                else
+                {
+                    newPage.insertChild(key, overFlowId, index+1);
+                }
             }
         }
         
@@ -400,7 +414,7 @@ public class BPlusPage
         return result;
     }
 
-    DeleteResult delete(long key) throws FledIOException, IOException, FledPresistanceException
+    DeleteResult delete(long key) throws IOException, FledPresistanceException
     {
         DeleteResult result = null;
         int half = bplustree.maxRecords >> 1;
@@ -417,8 +431,9 @@ public class BPlusPage
             }
 
             result.underflow    = false;
-            result.removedValue = bplustree.valueSerailizer.deserialize(getValue(index));
+            result.removedValue = bplustree.deserializeValue(getValue(index));
             deleteEntry(index);
+            bplustree.savePage(this);
         }
         else
         {
@@ -436,12 +451,18 @@ public class BPlusPage
                     if (brother.compacityUsed() > half)
                     {
                         // this is the formual for how much is going to be
-                        // stolen from the brother page. the formula ensures
-                        // that the amount of records stolen from the brother
-                        // wont leave the brother less than half empty
+                        // stolen from the brother page. the formula just
+                        // makes both pages have the same amount of entries
                         int stealing = (brother.compacityUsed() - half + 1) / 2;
                         
-                        brother.moveValues(0, child, half - 1, stealing);
+                        System.arraycopy(brother.keys, 0, child.keys, half - 1, stealing);
+                        System.arraycopy(brother.keys, stealing, brother.keys, 0, brother.compacityUsed() - stealing);
+                        for(int i = 0; i < stealing; i++)
+                        {
+                            child.bytes.insert(brother.bytes.read(0), half - 1 + i);
+                            brother.bytes.remove(0);
+                            brother.keys[brother.compacityUsed()] = BPlusTree.NULL_PAGE;
+                        }
                         
                         // update the children pages again
                         keys[index] = child.getKey(0);
@@ -469,7 +490,13 @@ public class BPlusPage
                             throw new FledPresistanceException(LanguageStatements.NONE);
                         }
                         
-                        child.moveValues(0, brother, 0, half - 1);
+                        System.arraycopy(brother.keys, 0, brother.keys, half - 1, half);
+                        System.arraycopy(child.keys, 0, brother.keys, 0, half - 1);
+                        while(child.compacityUsed() > 0)
+                        {
+                            brother.bytes.insert(child.bytes.read(child.bytes.compacityUsed() - 1), 0);
+                            child.bytes.remove(child.bytes.compacityUsed() - 1);
+                        }
                         
                         this.deleteChild(index);
                         this.keys[index] = brother.getKey(0);
@@ -485,11 +512,26 @@ public class BPlusPage
                         
                         if (child.nextId != BPlusTree.NULL_PAGE)
                         {
+                            /* the brother is always going to be the
+                             * next child and loading and saving twice
+                             * makes this block not actually saved
+                             * when the brother gets saved below and 
+                             * no caching layer for loaded files
                             BPlusPage next = bplustree.loadPage(child.nextId);
                             
                             next.prevId = child.prevId;
                             
                             bplustree.savePage(next);
+                             */
+                            if (child.nextId != brother.thisId)
+                            {
+                                // @TODO statement
+                                throw new FledPresistanceException(LanguageStatements.NONE);
+                            }
+                            else
+                            {
+                                brother.prevId = child.prevId;
+                            }
                         }
                         
                         bplustree.savePage(this);
@@ -505,7 +547,14 @@ public class BPlusPage
                     {
                         int stealing = (brother.compacityUsed() - half + 1) / 2;
                         
-                        brother.moveValues(brother.compacityUsed() - stealing, child, 0, stealing);
+                        System.arraycopy(child.keys, 0, child.keys, stealing, child.compacityUsed());
+                        System.arraycopy(brother.keys, brother.compacityUsed() - stealing - 1, child.keys, 0, stealing);
+                        for(int i = 0; i < stealing; i++)
+                        {
+                            child.bytes.insert(brother.bytes.read(brother.bytes.compacityUsed() - 1), 0);
+                            brother.bytes.remove(brother.bytes.compacityUsed() - 1);
+                            brother.keys[brother.bytes.compacityUsed()] = BPlusTree.NULL_PAGE;
+                        }
                         
                         // update the children pages again
                         keys[index] = child.getKey(0);
@@ -522,23 +571,35 @@ public class BPlusPage
                         {
                             // this means that something really, really
                             // bad happened, but save what we've done
-                            // so far.
+                            // so far so its not completely corrupt
                             bplustree.savePage(this);
                             // @TODO statement
                             throw new FledPresistanceException(LanguageStatements.NONE);
                         }
                         
-                        child.moveValues(0, brother, half + 1, child.bytes.compacityUsed());
+//                        child.copyValues(0, brother, half + 1, child.compacityUsed());
+                        
+                        System.arraycopy(child.keys, 0, brother.keys, half, half - 1);
+                        while(child.compacityUsed() > 0)
+                        {
+                            brother.bytes.insert(child.bytes.read(child.bytes.compacityUsed() - 1), half);
+                            child.bytes.remove(child.bytes.compacityUsed() - 1);
+                        }
                         
                         this.deleteChild(index);
+                        this.keys[index] = brother.getKey(0);
                         
                         if (child.prevId != BPlusTree.NULL_PAGE)
                         {
-                            BPlusPage prev = bplustree.loadPage(child.prevId);
-                            
-                            prev.nextId = child.nextId;
-                            
-                            bplustree.savePage(prev);
+                            if (brother.thisId != child.prevId)
+                            {
+                                // @TODO statement
+                                throw new FledPresistanceException(LanguageStatements.NONE);
+                            }
+                            else
+                            {
+                                brother.nextId = child.nextId;
+                            }
                         }
                         
                         if (child.nextId != BPlusTree.NULL_PAGE)
@@ -551,8 +612,8 @@ public class BPlusPage
                         }
                         
                         bplustree.savePage(this);
-                        bplustree.savePage(child);
                         bplustree.savePage(brother);
+                        bplustree.deletePage(child);
                     }
                 }
             }
@@ -566,6 +627,27 @@ public class BPlusPage
         result.underflow = bytes.compacityUsed() < half;
 
         return result;
+    }
+    
+    public void truncate(int height) 
+            throws FledPresistanceException
+    {
+        height--;
+        if (height == 0)
+        {
+            for(int i = 0; i < bytes.compacityUsed(); i++)
+            {
+                bplustree.fileManager.deleteFile(getChildId(i));
+            }
+        }
+        else
+        {
+            for(int i = 0; i < bytes.compacityUsed(); i++)
+            {
+                bplustree.loadPage(getChildId(i)).truncate(height);
+            }
+        }
+        bplustree.fileManager.deleteFile(thisId);
     }
     
     protected int findFirstLessOrEqualChild(long key)
@@ -597,6 +679,11 @@ public class BPlusPage
         return max;
     }
 
+    Long getKey(int index) 
+    {
+        return keys[index];
+    }
+
     protected boolean isFull() 
     {
         return bytes.isFull();
@@ -605,10 +692,28 @@ public class BPlusPage
     private void insertEntry(long key, Object record, int index) 
             throws IOException 
     {
-        byte[] raw = bplustree.valueSerailizer.serialize(record);
+        byte[] raw = bplustree.serializeValue(record);
         bytes.insert(raw, index);
         System.arraycopy(keys, index, keys, index + 1, keys.length - index - 1);
         keys[index] = key;
+    }
+
+    long getChildId(int index) 
+    {
+        byte[] raw = bytes.read(index);
+        if (raw.length != 8)
+        {
+            return BPlusTree.NULL_PAGE;
+        }
+        return 
+            (((long)(raw[0] & 0xff) << 56) |
+             ((long)(raw[1] & 0xff) << 48) |
+             ((long)(raw[2] & 0xff) << 40) |
+             ((long)(raw[3] & 0xff) << 32) |
+             ((long)(raw[4] & 0xff) << 24) |
+             ((long)(raw[5] & 0xff) << 16) |
+             ((long)(raw[6] & 0xff) <<  8) |
+             ((long)(raw[7] & 0xff)));
     }
 
     private void insertChild(long key, long childId, int index) 
@@ -641,30 +746,28 @@ public class BPlusPage
         keys[bytes.compacityUsed()] = 0;
     }
 
-    private void moveValues(int start, BPlusPage dest, int destStart, int count) 
-    {
-        for(int i = 0; i < count; i++)
-        {
-            byte[] raw = bytes.read(start);
-            bytes.remove(start);
-            
-            dest.bytes.insert(raw, destStart + i);
-        }
-        // first shift over the dest values so there is room
-        System.arraycopy(dest.keys, destStart, dest.keys, destStart + count, dest.keys.length - (destStart + count));
-        
-        // now move over the keys from this.keys to dest.keys
-        System.arraycopy(keys, start, dest.keys, destStart, count);
-        
-        // shitf this.keys backwards to fill in the empty gap now
-        System.arraycopy(keys, start + count, keys, start, count - start);
-        
-        // null the now unused this.keys
-        for(int i = bytes.compacityUsed(); i < bytes.compacity(); i++)
-        {
-            keys[i] = BPlusTree.NULL_PAGE;
-        }
-    }
+//    private void copyValues(int start, BPlusPage dest, int destStart, int count) 
+//    {
+//        byte[][] work = new byte[count][];
+//        for(int i = 0; i < count; i++)
+//        {
+//            work[i] = bytes.read(start + i);
+//        }
+//        for(int i = 0; i < count; i++)
+//        {
+//            dest.bytes.write(work[i], destStart + i);
+//        }
+//        System.arraycopy(keys, start, dest.keys, destStart, count);
+//    }
+//    
+//    private void nullValues(int start, int count)
+//    {
+//        for(int i = start; i < start + count; i++)
+//        {
+//            bytes.remove(start);
+//            keys[i] = BPlusTree.NULL_PAGE;
+//        }
+//    }
     
     public static class BPlusPageSerializer implements Serializer<byte[]>
     {
@@ -682,6 +785,124 @@ public class BPlusPage
             BPlusPage page = (BPlusPage) obj;
             page.bytes.setMeta(page.buildMeta());
             return page.bytes.getBytes();
+        }
+    }
+    
+    void dump(int height)
+    {
+        String prefix = "";
+        for(int i = 0; i < height; i++) 
+        {
+           prefix += "    ";
+        }
+        System.out.println(prefix + "-------------------------------------- BPage recid=" + thisId);
+        System.out.println(prefix + "keysUsed: " + bytes.compacityUsed());
+        for (int i = 0; i < bytes.compacityUsed(); i++) 
+        {
+            try
+            {
+                if (isLeaf) 
+                {
+                    System.out.println(prefix+"BPlusPage ["+i+"] "+keys[i]+" "+bplustree.deserializeValue(bytes.read(i)).toString());
+                } 
+                else 
+                {
+                    System.out.println(prefix+"BPlusPage ["+i+"] "+keys[i]+" "+getChildId(i));
+                }
+            }
+            catch(Exception ex)
+            {
+                System.out.println(prefix+"BPlusPage ["+i+"] "+keys[i]+" unknown");
+            }
+        }
+        System.out.println(prefix + "--------------------------------------");
+    }
+
+
+    /**
+     * Recursively dump the state of the BTree on screen.  This is used for
+     * debugging purposes only.
+     */
+    public void dumpRecursive(int height)
+        throws FledPresistanceException
+    {
+        dump(height);
+        height++;
+        if (!isLeaf)
+        {
+            for(int i = 0; i < bytes.compacityUsed(); i++) 
+            {
+                BPlusPage child = bplustree.loadPage(getChildId(i));
+                child.dumpRecursive(height);
+            }
+        }
+    }
+    
+    public void assertValues() 
+            throws Exception
+    {
+        if (!this.isLeaf)
+        {
+            bplustree.loadPage(getChildId(0)).assertValues();
+            return;
+        }
+        
+        
+        for(int i = 0; i < bytes.compacityUsed(); i++)
+        {
+            try
+            {
+                bplustree.deserializeValue(bytes.read(i));
+            }
+            catch(Exception ex)
+            {
+                bplustree.getRoot().dumpRecursive(0);
+                throw new Exception("values are corrupt");
+            }
+        }
+        
+        if (this.nextId != BPlusTree.NULL_PAGE)
+        {
+            BPlusPage next = bplustree.loadPage(this.nextId);
+            next.assertValues();
+        }
+    }
+
+    public void assertOrder(BPlusPage prev, int tolerance) 
+            throws Exception
+    {
+        if (!this.isLeaf)
+        {
+            bplustree.loadPage(getChildId(0)).assertOrder(null, tolerance);
+            return;
+        }
+        
+        // check if the 'last' page's last key is less than
+        // the first of this one
+        if (prev != null)
+        {
+            if (prev.keys[prev.bytes.compacityUsed() - 1] >= keys[0] ||
+                Math.abs(prev.keys[prev.bytes.compacityUsed() - 1] - keys[0]) > tolerance)
+            {
+                bplustree.getRoot().dumpRecursive(0);
+                throw new Exception("keys out of order (" + prev.keys[prev.bytes.compacityUsed() - 1] + " >= " + keys[0] + ")");
+            }
+        }
+        
+        for(int i = 0; i < bytes.compacityUsed() - 1; i++)
+        {
+            if (keys[i] >= keys[i + 1]||
+                Math.abs(keys[i + 1] - keys[i]) > tolerance)
+            {
+                bplustree.getRoot().dumpRecursive(0);
+                throw new Exception("keys out of order (" + keys[i] + " >= " + keys[i + 1] + ")");
+            }
+        }
+        
+        if (this.nextId != BPlusTree.NULL_PAGE)
+        {
+            BPlusPage next = bplustree.loadPage(this.nextId);
+            next.assertOrder(this, tolerance);
         }
     }
 }

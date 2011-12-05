@@ -4,12 +4,12 @@
  */
 package com.rf.fled.persistence.bplustree;
 
-import com.rf.fled.exceptions.FledIOException;
+import com.rf.fled.persistence.FledPresistanceException;
 import com.rf.fled.persistence.Persistence;
-import com.rf.fled.config.FledProperties;
 import com.rf.fled.persistence.FileManager;
-import com.rf.fled.persistence.fileio.BaseFileManager;
+import com.rf.fled.persistence.filemanager.FileManager_FileSystemNoTree;
 import java.io.File;
+import java.util.Random;
 import junit.framework.Assert;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -22,6 +22,8 @@ import org.junit.Test;
  * @author REx
  */
 public class BPlusTreeTest {
+    
+    public static final String DIRECTORY = "C:/Users/REx/Desktop/fledhome/data";
     
     public BPlusTreeTest() {
     }
@@ -36,7 +38,7 @@ public class BPlusTreeTest {
     
     @Before
     public void setUp() {
-        File[] files = (new File("C:/Users/REx/Desktop/fledhome/data")).listFiles();
+        File[] files = (new File(DIRECTORY)).listFiles();
         for(File file : files)
         {
             file.delete();
@@ -45,48 +47,251 @@ public class BPlusTreeTest {
     
     @After
     public void tearDown() {
+        File[] files = (new File(DIRECTORY)).listFiles();
+        for(File file : files)
+        {
+            file.delete();
+        }
     }
     
-    public Persistence getBPlusTree() throws FledIOException
+    public Persistence getBPlusTree(int count) throws FledPresistanceException 
     {
-        FileManager fileManager = new BaseFileManager(
-                new FledProperties(), 0, "C:/Users/REx/Desktop/fledhome/data");
-        Persistence instance = BPlusTree.createBPlusTree(fileManager, "test");
+        FileManager fileManager = new FileManager_FileSystemNoTree(DIRECTORY, 0);
+//        FileManager fileManager = new FileManager_InMemory();
+        Persistence instance = BPlusTree.createBPlusTree(fileManager, "test", count, null, null);
         return instance;
     }
     
+//    @Test
+    public void testSpeed() throws Exception
+    {
+        // start with 8
+        int size = 8;
+        int count = 1001;
+        int check = 200;
+        FileManager fileManager = new FileManager_FileSystemNoTree(DIRECTORY, 0);
+        
+        for(int kk = 0; kk < 6; kk++)
+        {
+            Persistence instance = BPlusTree.createBPlusTree(fileManager, "test", size, null, null);
+
+            long start = System.currentTimeMillis();
+            for(int i = 0; i < count; i++)
+            {
+                MockValue value = new MockValue();
+                value.id = (long)(i + 1);
+                value.content = "hello world number " + (i + 1);
+                Object result = instance.insert((long)(i + 1), value, true);
+                Assert.assertNull(result);
+                if (i % check == 0)
+                {
+                    System.out.println("inserted " + i + " records with " + size);
+                }
+            }
+            System.out.println("finshed inserts in " + (System.currentTimeMillis() - start));
+
+            start = System.currentTimeMillis();
+            for(int i = 0; i < count; i++)
+            {
+                Object result = instance.select((long)(i + 1));
+                Assert.assertTrue(result instanceof MockValue);
+                MockValue value = (MockValue) result;
+                Assert.assertEquals(((long) (i + 1)), value.id);
+                Assert.assertEquals("hello world number " + (i + 1), value.content);
+                if (i % check == 0)
+                {
+                    System.out.println("read " + i + " records with " + size);
+                }
+            }
+            System.out.println("finshed reads in " + (System.currentTimeMillis() - start));
+
+            start = System.currentTimeMillis();
+            for(int i = 0; i < count; i++)
+            {
+                Object result = instance.delete((long)(i + 1));
+                Assert.assertTrue(result instanceof MockValue);
+                MockValue value = (MockValue) result;
+                Assert.assertEquals(((long) (i + 1)), value.id);
+                Assert.assertEquals("hello world number " + (i + 1), value.content);
+                if (i % check == 0)
+                {
+                    System.out.println("deleted " + i + " records with " + size);
+                }
+            }
+            System.out.println("finshed deletes in " + (System.currentTimeMillis() - start));
+            
+            size *= 2;
+        }
+    }
+    
+//    @Test
+    public void testTruncate() throws Exception
+    {
+        System.out.println("testTruncate");
+        
+        Persistence instance = getBPlusTree(4);
+        
+        int count = 101;
+        
+        for(int i = 0; i < count; i++)
+        {
+            MockValue value = new MockValue();
+            value.id = (long)(i + 1);
+            value.content = "hello world number " + (i + 1);
+            instance.insert((long)(i + 1), value, true);
+        }
+        
+        instance.truncate();
+        
+        File[] files = (new File(DIRECTORY)).listFiles();
+        Assert.assertEquals(1, files.length);
+    }
+    
+//    @Test
+    public void runRandomInsertsAlot() throws Exception
+    {
+        // the reason we need to do this is because
+        // random inserts are just that... random. so we need
+        // to check it a few times to get a higher degree of confidence
+        for(int i = 0; i < 5; i++)
+        {
+            System.out.println("testRandomInserts: " + (i + 1));
+            testRandomInserts();
+        }
+    }
+    
     @Test
+    public void testRandomInserts() throws Exception
+    {
+        System.out.println("testRandomInserts");
+        
+        Persistence instance = getBPlusTree(64);
+        Random random = new Random();
+        
+        int count = 10001;
+        int check = 500;
+        
+        for(int i = 0; i < count; i++)
+        {
+            int randomValue = random.nextInt(200000) + 1;
+            MockValue value = new MockValue();
+            value.id = randomValue;
+            value.content = "hello world number " + randomValue;
+            instance.insert(randomValue, value, true);
+            if (i % check == 0)
+            {
+                System.out.println("inserted " + i + " records");
+            }
+        }
+        
+        System.out.println("number of records: " + instance.size());
+        
+        ((BPlusTree) instance).assertOrder(Integer.MAX_VALUE);
+        ((BPlusTree) instance).assertValues();
+        
+        instance.truncate();
+    }
+    
+//    @Test
     public void testHappyPath() throws Exception {
         System.out.println("happy path");
         
-        Persistence instance = getBPlusTree();
+        Persistence instance = getBPlusTree(64);
         
-        for(int i = 0; i < 100; i++)
+        int count = 10001;
+        int check = 1000;
+        
+        for(int i = 0; i < count; i++)
         {
             MockValue value = new MockValue();
-            value.id = (long)i;
+            value.id = (long)(i + 1);
             value.content = "hello world number " + (i + 1);
-            Object result = instance.insert((long)(i + 1), value, true);
-            Assert.assertNull(result);
+            Object result = null;
+            if (i % check == 0)
+            {
+                System.out.println("inserted " + i + " records");
+            }
+            try
+            {
+                if (i == 136)
+                {
+                    int b = 0;
+                    b++;
+                }
+                result = instance.insert((long)(i + 1), value, true);
+//                ((BPlusTree) instance).assertOrder(1);
+//                ((BPlusTree) instance).assertValues();
+                Assert.assertNull(result);
+            }
+            catch(Exception ex)
+            {
+                System.out.println("insertion error on index " + i);
+                ((BPlusTree) instance).dump();
+                throw ex;
+            }
+//            ((BPlusTree) instance).dump();
         }
         
-        for(int i = 0; i < 100; i++)
+//        ((BPlusTree) instance).dump();
+        
+        for(int i = 0; i < count; i++)
         {
-            Object result = instance.select((long)(i + 1));
-            Assert.assertTrue(result instanceof MockValue);
-            MockValue value = (MockValue) result;
-            Assert.assertEquals(((long) i), value.id);
-            Assert.assertEquals("hello world number " + (i + 1), value.content);
+            Object result = null;
+            try
+            {
+                result = instance.select((long)(i + 1));
+                
+//                ((BPlusTree) instance).assertOrder(1);
+//                ((BPlusTree) instance).assertValues();
+                Assert.assertTrue(result instanceof MockValue);
+                MockValue value = (MockValue) result;
+                Assert.assertEquals(((long) (i + 1)), value.id);
+                Assert.assertEquals("hello world number " + (i + 1), value.content);
+            }
+            catch(Exception ex)
+            {
+                System.out.println("selection error on index " + i);
+                ((BPlusTree) instance).dump();
+                throw ex;
+            }
+            if (i % check == 0)
+            {
+                System.out.println("read " + i + " records");
+            }
         }
         
-        for(int i = 0; i < 100; i++)
+        for(int i = 0; i < count; i++)
         {
-            Object result = instance.delete((long)(i + 1));
-            Assert.assertTrue(result instanceof MockValue);
-            MockValue value = (MockValue) result;
-            Assert.assertEquals(((long) i), value.id);
-            Assert.assertEquals("hello world number " + (i + 1), value.content);
+            Object result = null;
+            try
+            {
+                if (i == 63)
+                {
+                    int b = 0;
+                    b++;
+                }
+                result = instance.delete((long)(i + 1));
+                
+//                ((BPlusTree) instance).dump();
+//                ((BPlusTree) instance).assertOrder(1);
+//                ((BPlusTree) instance).assertValues();
+                Assert.assertTrue(result instanceof MockValue);
+                MockValue value = (MockValue) result;
+                Assert.assertEquals(((long) (i + 1)), value.id);
+                Assert.assertEquals("hello world number " + (i + 1), value.content);
+            }
+            catch(Exception ex)
+            {
+                System.out.println("deletion error on index " + i);
+                ((BPlusTree) instance).dump();
+                throw ex;
+            }
+            if (i % check == 0)
+            {
+                System.out.println("deleted " + i + " records");
+            }
         }
+        ((BPlusTree) instance).dump();
     }
 
 //    /**
@@ -100,21 +305,6 @@ public class BPlusTreeTest {
 //        
 //        long expResult = 0L;
 //        long result = instance.size();
-//        assertEquals(expResult, result);
-//        // TODO review the generated test code and remove the default call to fail.
-//        fail("The test case is a prototype.");
-//    }
-//
-//    /**
-//     * Test of getContext method, of class BPlusTree.
-//     */
-//    @Test
-//    public void testGetContext() throws Exception {
-//        System.out.println("getContext");
-//        
-//        Persistence instance = getBPlusTree();
-//        String expResult = "";
-//        String result = instance.getContext();
 //        assertEquals(expResult, result);
 //        // TODO review the generated test code and remove the default call to fail.
 //        fail("The test case is a prototype.");
