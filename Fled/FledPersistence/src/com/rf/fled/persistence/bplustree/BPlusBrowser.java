@@ -4,16 +4,16 @@
  */
 package com.rf.fled.persistence.bplustree;
 
-import com.rf.fled.persistence.FledPresistanceException;
-import com.rf.fled.language.LanguageStatements;
+import com.rf.fled.persistence.FledPersistenceException;
 import com.rf.fled.persistence.Browser;
-import com.rf.fled.util.Pair;
+import com.rf.fled.persistence.KeyValuePair;
+import com.rf.fled.persistence.localization.LanguageStatements;
 
 /**
- *
+ * 
  * @author REx
  */
-public class BPlusBrowser implements Browser<Pair<Long, Object>>
+public class BPlusBrowser implements Browser<KeyValuePair<Long, Object>>
 {
     /**
      * the current managing btree
@@ -53,8 +53,8 @@ public class BPlusBrowser implements Browser<Pair<Long, Object>>
     }
 
     @Override
-    public boolean curr(Pair<Long, Object> pair) 
-            throws FledPresistanceException
+    public boolean curr(KeyValuePair<Long, Object> pair) 
+            throws FledPersistenceException
     {
         // all we have to do is check to make sure that this index
         // is a valid one. 
@@ -62,8 +62,8 @@ public class BPlusBrowser implements Browser<Pair<Long, Object>>
         {
             if (pair != null)
             {
-                pair.setLeft(page.getKey(index));
-                pair.setRight(page.getValue(index));
+                pair.setKey(page.getKey(index));
+                pair.setValue(page.getValue(index));
             }
             return true;
         }
@@ -71,8 +71,8 @@ public class BPlusBrowser implements Browser<Pair<Long, Object>>
     }
 
     @Override
-    public boolean next(Pair<Long, Object> pair) 
-            throws FledPresistanceException
+    public boolean next(KeyValuePair<Long, Object> pair) 
+            throws FledPersistenceException
     {
         // add one to move the index
         index++;
@@ -81,8 +81,8 @@ public class BPlusBrowser implements Browser<Pair<Long, Object>>
         if (page.indexInRange(index))
         {
             // if it is, then just return
-            pair.setLeft(page.getKey(index));
-            pair.setRight(page.getValue(index));
+            pair.setKey(page.getKey(index));
+            pair.setValue(page.getValue(index));
             return true;
         }
         else
@@ -99,8 +99,8 @@ public class BPlusBrowser implements Browser<Pair<Long, Object>>
             if (page == null)
             {
                 // something messed up bad
-                throw new FledPresistanceException(
-                        LanguageStatements.FILE_DOES_NOT_EXISTS);
+                throw new FledPersistenceException(
+                        LanguageStatements.FILE_DOES_NOT_EXISTS.toString());
             }
             
             // set the index to the first index in the new page
@@ -109,20 +109,20 @@ public class BPlusBrowser implements Browser<Pair<Long, Object>>
             {
                 // something messed up really bad... this means that
                 // the next page was empty
-                throw new FledPresistanceException(
-                        LanguageStatements.UNEXPECTED_EXCEPTION);
+                throw new FledPersistenceException(
+                        LanguageStatements.UNEXPECTED_EXCEPTION.toString());
             }
             
             // if we get here, then we are finished
-            pair.setLeft(page.getKey(index));
-            pair.setRight(page.getValue(index));
+            pair.setKey(page.getKey(index));
+            pair.setValue(page.getValue(index));
             return true;
         }
     }
 
     @Override
-    public boolean prev(Pair<Long, Object> pair) 
-            throws FledPresistanceException
+    public boolean prev(KeyValuePair<Long, Object> pair) 
+            throws FledPersistenceException
     {
         index--;
         if (index < 0)
@@ -138,8 +138,8 @@ public class BPlusBrowser implements Browser<Pair<Long, Object>>
             if (page == null)
             {
                 // something messed up bad
-                throw new FledPresistanceException(
-                        LanguageStatements.FILE_DOES_NOT_EXISTS);
+                throw new FledPersistenceException(
+                        LanguageStatements.FILE_DOES_NOT_EXISTS.toString());
             }
             
             // set the index to the first index in the new page
@@ -148,14 +148,14 @@ public class BPlusBrowser implements Browser<Pair<Long, Object>>
             {
                 // something messed up really bad... this means that
                 // the next page was empty
-                throw new FledPresistanceException(
-                        LanguageStatements.UNEXPECTED_EXCEPTION);
+                throw new FledPersistenceException(
+                        LanguageStatements.UNEXPECTED_EXCEPTION.toString());
             }
         }
         
         // if we get here... we're good
-        pair.setLeft(page.getKey(index));
-        pair.setRight(page.getValue(index));
+        pair.setKey(page.getKey(index));
+        pair.setValue(page.getValue(index));
         return true;
     }
 }

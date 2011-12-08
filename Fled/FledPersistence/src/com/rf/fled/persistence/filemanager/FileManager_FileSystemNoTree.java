@@ -4,25 +4,27 @@
  */
 package com.rf.fled.persistence.filemanager;
 
-import com.rf.fled.interfaces.Serializer;
-import com.rf.fled.language.LanguageStatements;
-import com.rf.fled.language.Languages;
+import com.rf.fled.persistence.transaction.SimpleTransaction;
 import com.rf.fled.persistence.fileio.ByteSerializer;
 import com.rf.fled.persistence.FileManager;
-import com.rf.fled.persistence.FledPresistanceException;
+import com.rf.fled.persistence.FledPersistenceException;
 import com.rf.fled.persistence.FledTransactionException;
+import com.rf.fled.persistence.Serializer;
+import com.rf.fled.persistence.localization.LanguageStatements;
+import com.rf.fled.persistence.localization.Languages;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Observable;
 
 /**
  *
  * @author REx
  */
-public class FileManager_FileSystemNoTree implements FileManager
+public class FileManager_FileSystemNoTree extends Observable implements FileManager
 {
     private String directory;
     
@@ -60,7 +62,7 @@ public class FileManager_FileSystemNoTree implements FileManager
 
     @Override
     public Object loadFile(long id, Serializer<byte[]> serializer) 
-            throws FledPresistanceException
+            throws FledPersistenceException
     {
         Object result = null;
         try
@@ -73,14 +75,15 @@ public class FileManager_FileSystemNoTree implements FileManager
         catch(Exception ex)
         {
             // @TODO statement
-            throw new FledPresistanceException(LanguageStatements.NONE, ex);
+            throw new FledPersistenceException(
+                    LanguageStatements.NONE.toString(), ex);
         }
         return result;
     }
 
     @Override
     public long saveFile(Object data, Serializer<byte[]> serializer) 
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         long id = -1;
         try
@@ -92,7 +95,8 @@ public class FileManager_FileSystemNoTree implements FileManager
                 if ((new File(filename)).exists())
                 {
                     // @TODO statement
-                    throw new FledPresistanceException(LanguageStatements.NONE);
+                    throw new FledPersistenceException(
+                            LanguageStatements.NONE.toString());
                 }
 
                 writeFile0(filename, data, serializer);
@@ -101,14 +105,15 @@ public class FileManager_FileSystemNoTree implements FileManager
         catch(Exception ex)
         {
             // @TODO statement
-            throw new FledPresistanceException(LanguageStatements.NONE, ex);
+            throw new FledPersistenceException(
+                    LanguageStatements.NONE.toString(), ex);
         }
         return id;
     }
 
     @Override
     public void updateFile(long id, Object data, Serializer<byte[]> serializer) 
-            throws FledPresistanceException
+            throws FledPersistenceException
     {
         try
         {
@@ -121,13 +126,14 @@ public class FileManager_FileSystemNoTree implements FileManager
         catch(Exception ex)
         {
             // @TODO statement
-            throw new FledPresistanceException(LanguageStatements.NONE, ex);
+            throw new FledPersistenceException(
+                    LanguageStatements.NONE.toString(), ex);
         }
     }
 
     @Override
     public void deleteFile(long id) 
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         try
         {
@@ -139,13 +145,14 @@ public class FileManager_FileSystemNoTree implements FileManager
         catch(Exception ex)
         {
             // @TODO statement
-            throw new FledPresistanceException(LanguageStatements.NONE, ex);
+            throw new FledPersistenceException(
+                    LanguageStatements.NONE.toString(), ex);
         }
     }
 
     @Override
     public Object loadNamedFile(String name, Serializer<byte[]> serializer) 
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         Object result = null;
         try
@@ -158,14 +165,15 @@ public class FileManager_FileSystemNoTree implements FileManager
         catch(Exception ex)
         {
             // @TODO statement
-            throw new FledPresistanceException(LanguageStatements.NONE, ex);
+            throw new FledPersistenceException(
+                    LanguageStatements.NONE.toString(), ex);
         }
         return result;
     }
 
     @Override
     public void saveNamedFile(String name, Object data, Serializer<byte[]> serializer) 
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         try
         {
@@ -177,13 +185,14 @@ public class FileManager_FileSystemNoTree implements FileManager
         catch(Exception ex)
         {
             // @TODO statement
-            throw new FledPresistanceException(LanguageStatements.NONE, ex);
+            throw new FledPersistenceException(
+                    LanguageStatements.NONE.toString(), ex);
         }
     }
 
     @Override
     public void deleteNamedFile(String name) 
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         try
         {
@@ -195,7 +204,8 @@ public class FileManager_FileSystemNoTree implements FileManager
         catch(Exception ex)
         {
             // @TODO statement
-            throw new FledPresistanceException(LanguageStatements.NONE, ex);
+            throw new FledPersistenceException(
+                    LanguageStatements.NONE.toString(), ex);
         }
     }
     

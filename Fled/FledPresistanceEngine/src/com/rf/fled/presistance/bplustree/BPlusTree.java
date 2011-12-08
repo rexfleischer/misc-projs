@@ -8,11 +8,11 @@ import com.rf.fled.persistence.FledPresistanceException;
 import com.rf.fled.persistence.FledTransactionException;
 import com.rf.fled.presistance.Browser;
 import com.rf.fled.presistance.Presistance;
-import com.rf.fled.interfaces.Serializer;
+import com.rf.fled.persistence.Serializer;
 import com.rf.fled.language.LanguageStatements;
 import com.rf.fled.presistance.FileManager;
 import com.rf.fled.presistance.RecordFile;
-import com.rf.fled.util.Pair;
+import com.rf.fled.persistence.Pair;
 import java.io.IOException;
 import java.util.Map;
 

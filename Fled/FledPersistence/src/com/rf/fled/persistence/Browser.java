@@ -11,14 +11,14 @@ package com.rf.fled.persistence;
 public interface Browser<_Ty> 
 {
     public boolean valid()
-            throws FledPresistanceException;
+            throws FledPersistenceException;
     
     public boolean curr(_Ty obj)
-            throws FledPresistanceException;
+            throws FledPersistenceException;
     
     public boolean prev(_Ty obj)
-            throws FledPresistanceException;
+            throws FledPersistenceException;
     
     public boolean next(_Ty obj)
-            throws FledPresistanceException;
+            throws FledPersistenceException;
 }

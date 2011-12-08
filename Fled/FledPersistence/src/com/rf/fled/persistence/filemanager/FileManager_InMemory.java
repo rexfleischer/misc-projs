@@ -4,17 +4,20 @@
  */
 package com.rf.fled.persistence.filemanager;
 
+import com.rf.fled.persistence.transaction.SimpleTransaction;
 import com.rf.fled.persistence.FledTransactionException;
-import com.rf.fled.interfaces.Serializer;
 import com.rf.fled.persistence.FileManager;
-import com.rf.fled.persistence.FledPresistanceException;
+import com.rf.fled.persistence.FledPersistenceException;
+import com.rf.fled.persistence.Serializer;
 import java.util.HashMap;
+import java.util.Observable;
+import java.util.Observer;
 
 /**
  *
  * @author REx
  */
-public class FileManager_InMemory implements FileManager
+public class FileManager_InMemory extends Observable implements FileManager
 {
     private HashMap<Long, Object> keyedFiles;
     
@@ -64,21 +67,21 @@ public class FileManager_InMemory implements FileManager
 
     @Override
     public Object loadFile(long id, Serializer<byte[]> serializer)
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         return keyedFiles.get(id);
     }
 
     @Override
     public void updateFile(long id, Object data, Serializer<byte[]> serializer)
-            throws FledPresistanceException
+            throws FledPersistenceException
     {
         keyedFiles.put(id, data);
     }
 
     @Override
     public long saveFile(Object data, Serializer<byte[]> serializer) 
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         long id = incFileCount();
         keyedFiles.put(id, data);
@@ -87,28 +90,28 @@ public class FileManager_InMemory implements FileManager
 
     @Override
     public void deleteFile(long id) 
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         keyedFiles.remove(id);
     }
 
     @Override
     public Object loadNamedFile(String name, Serializer<byte[]> serializer) 
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         return namedFiles.get(name);
     }
 
     @Override
     public void saveNamedFile(String name, Object data, Serializer<byte[]> serializer) 
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         namedFiles.put(name, data);
     }
 
     @Override
     public void deleteNamedFile(String name) 
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         namedFiles.remove(name);
     }

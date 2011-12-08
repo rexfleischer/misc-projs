@@ -4,16 +4,16 @@
  */
 package com.rf.fled.persistence.bplustree;
 
-import com.rf.fled.persistence.FledPresistanceException;
+import com.rf.fled.persistence.FledPersistenceException;
 import com.rf.fled.persistence.FledTransactionException;
 import com.rf.fled.persistence.Browser;
-import com.rf.fled.interfaces.Serializer;
-import com.rf.fled.language.LanguageStatements;
 import com.rf.fled.persistence.fileio.ByteSerializer;
 import com.rf.fled.persistence.FileManager;
+import com.rf.fled.persistence.KeyValuePair;
 import com.rf.fled.persistence.Persistence;
+import com.rf.fled.persistence.Serializer;
 import com.rf.fled.persistence.Transactionable;
-import com.rf.fled.util.Pair;
+import com.rf.fled.persistence.localization.LanguageStatements;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.Externalizable;
@@ -52,7 +52,7 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
     public static BPlusTree createBPlusTree(
             FileManager fileManager,
             String treeName)
-            throws FledPresistanceException
+            throws FledPersistenceException
     {
         return createBPlusTree(fileManager, treeName, DEFAULT_RECORD_COUNT, null, null);
     }
@@ -63,7 +63,7 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
             int recordsPerPage,
             Serializer<byte[]> valueSerailizer,
             Serializer<byte[]> pageSerializer)
-            throws FledPresistanceException
+            throws FledPersistenceException
     {
         if (fileManager == null)
         {
@@ -102,7 +102,7 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
     public static BPlusTree loadBPlusTree(
             FileManager fileManager, 
             String treeName) 
-            throws FledPresistanceException
+            throws FledPersistenceException
     {
         BPlusTree result = (BPlusTree) fileManager.loadNamedFile(treeName, null);
         result.fileManager = fileManager;
@@ -116,21 +116,21 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
     
     @Override
     public long size()
-            throws FledPresistanceException
+            throws FledPersistenceException
     {
         return count;
     }
 
     @Override
     public String getContext() 
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         return context;
     }
 
     @Override
-    public Browser<Pair<Long, Object>> browse(long id)
-            throws FledPresistanceException 
+    public Browser<KeyValuePair<Long, Object>> browse(long id)
+            throws FledPersistenceException 
     {
         try
         {
@@ -145,13 +145,14 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
         catch(Exception ex)
         {
             // @TODO statement
-            throw new FledPresistanceException(LanguageStatements.NONE, ex);
+            throw new FledPersistenceException(
+                    LanguageStatements.NONE.toString(), ex);
         }
     }
 
     @Override
-    public Browser<Pair<Long, Object>> browse()
-            throws FledPresistanceException 
+    public Browser<KeyValuePair<Long, Object>> browse()
+            throws FledPersistenceException 
     {
         try
         {
@@ -166,13 +167,14 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
         catch(Exception ex)
         {
             // @TODO statement
-            throw new FledPresistanceException(LanguageStatements.NONE, ex);
+            throw new FledPersistenceException(
+                    LanguageStatements.NONE.toString(), ex);
         }
     }
 
     @Override
     public Object select(long id) 
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         try
         {
@@ -187,13 +189,14 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
         catch(Exception ex)
         {
             // @TODO statement
-            throw new FledPresistanceException(LanguageStatements.NONE, ex);
+            throw new FledPersistenceException(
+                    LanguageStatements.NONE.toString(), ex);
         }
     }
 
     @Override
     public Object insert(long id, Object record, boolean replace) 
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         try
         {
@@ -243,13 +246,14 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
         catch(Exception ex)
         {
             // @TODO statement
-            throw new FledPresistanceException(LanguageStatements.NONE, ex);
+            throw new FledPersistenceException(
+                    LanguageStatements.NONE.toString(), ex);
         }
     }
 
     @Override
     public Object delete(long id) 
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         try
         {
@@ -298,7 +302,8 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
         catch(Exception ex)
         {
             // @TODO statement
-            throw new FledPresistanceException(LanguageStatements.NONE, ex);
+            throw new FledPersistenceException(
+                    LanguageStatements.NONE.toString(), ex);
         }
     }
 
@@ -323,13 +328,13 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
         throw new UnsupportedOperationException();
     }
     
-    void savePage(BPlusPage page) throws FledPresistanceException
+    void savePage(BPlusPage page) throws FledPersistenceException
     {
         fileManager.updateFile(page.thisId, page, pageSerializer);
     }
 
     void deletePage(BPlusPage child) 
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         fileManager.deleteFile(child.thisId);
     }
@@ -367,7 +372,7 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
     }
 
     BPlusPage loadPage(long id) 
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         BPlusPage page = (BPlusPage) fileManager.loadFile(id, pageSerializer);
         if (page == null)
@@ -380,7 +385,7 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
     }
     
     protected BPlusPage getRoot() 
-            throws FledPresistanceException
+            throws FledPersistenceException
     {
         if (root == BPlusTree.NULL_PAGE)
         {
@@ -405,7 +410,8 @@ public class BPlusTree implements Persistence, Transactionable, Externalizable
         catch(Exception ex)
         {
             // @TODO statement
-            throw new FledTransactionException(LanguageStatements.NONE, ex);
+            throw new FledTransactionException(
+                    LanguageStatements.NONE.toString(), ex);
         }
     }
 

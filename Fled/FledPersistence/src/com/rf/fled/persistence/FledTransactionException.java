@@ -4,23 +4,22 @@
  */
 package com.rf.fled.persistence;
 
-import com.rf.fled.exceptions.FledException;
-import com.rf.fled.language.LanguageStatements;
-
 /**
  *
  * @author REx
  */
-public class FledTransactionException extends FledException
+public class FledTransactionException extends Exception
 {
-    public FledTransactionException(LanguageStatements statement, Throwable cause) {
-        super(statement, cause);
+
+    public FledTransactionException(String message, Throwable cause) {
+        super(message, cause);
     }
 
-    public FledTransactionException(LanguageStatements statement) {
-        super(statement);
+    public FledTransactionException(String message) {
+        super(message);
     }
 
     public FledTransactionException() {
     }
+    
 }

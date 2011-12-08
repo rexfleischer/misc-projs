@@ -4,7 +4,7 @@
  */
 package com.rf.fled.persistence.bplustree;
 
-import com.rf.fled.persistence.FledPresistanceException;
+import com.rf.fled.persistence.FledPersistenceException;
 import com.rf.fled.persistence.Persistence;
 import com.rf.fled.persistence.FileManager;
 import com.rf.fled.persistence.filemanager.FileManager_FileSystemNoTree;
@@ -54,7 +54,7 @@ public class BPlusTreeTest {
         }
     }
     
-    public Persistence getBPlusTree(int count) throws FledPresistanceException 
+    public Persistence getBPlusTree(int count) throws FledPersistenceException 
     {
         FileManager fileManager = new FileManager_FileSystemNoTree(DIRECTORY, 0);
 //        FileManager fileManager = new FileManager_InMemory();
@@ -168,8 +168,8 @@ public class BPlusTreeTest {
         Persistence instance = getBPlusTree(64);
         Random random = new Random();
         
-        int count = 10001;
-        int check = 500;
+        int count = 1001;
+        int check = 100;
         
         for(int i = 0; i < count; i++)
         {

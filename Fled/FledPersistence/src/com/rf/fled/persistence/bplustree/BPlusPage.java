@@ -4,20 +4,22 @@
  */
 package com.rf.fled.persistence.bplustree;
 
-import com.rf.fled.persistence.FledPresistanceException;
-import com.rf.fled.interfaces.Serializer;
-import com.rf.fled.language.LanguageStatements;
+import com.rf.fled.persistence.FileManager;
+import com.rf.fled.persistence.FledPersistenceException;
 import com.rf.fled.persistence.Browser;
+import com.rf.fled.persistence.KeyValuePair;
+import com.rf.fled.persistence.Serializer;
+import com.rf.fled.persistence.Transactionable;
 import com.rf.fled.persistence.fileio.ByteArray;
 import com.rf.fled.persistence.fileio.RecordFile;
-import com.rf.fled.util.Pair;
+import com.rf.fled.persistence.localization.LanguageStatements;
 import java.io.IOException;
 
 /**
  *
  * @author REx
  */
-public class BPlusPage 
+public class BPlusPage implements Transactionable
 {
     private RecordFile bytes;
     
@@ -67,7 +69,7 @@ public class BPlusPage
      * @param record 
      */
     BPlusPage(BPlusTree bplustree, long id, Object record) 
-            throws IOException, FledPresistanceException 
+            throws IOException, FledPersistenceException 
     {
         this.isLeaf = true;
         this.bplustree = bplustree;
@@ -89,7 +91,7 @@ public class BPlusPage
      * @param overflowPage 
      */
     BPlusPage(BPlusTree bplustree, BPlusPage rootPage, BPlusPage overflowPage) 
-            throws IOException, FledPresistanceException
+            throws IOException, FledPersistenceException
     {
         this.isLeaf = false;
         this.bplustree = bplustree;
@@ -111,7 +113,7 @@ public class BPlusPage
      * @param isLeaf 
      */
     BPlusPage(BPlusTree bplustree, boolean isLeaf) 
-            throws IOException, FledPresistanceException
+            throws IOException, FledPersistenceException
     {
         this.isLeaf = isLeaf;
         this.bplustree = bplustree;
@@ -122,6 +124,22 @@ public class BPlusPage
         this.bytes  = new RecordFile(keys.length);
         
         this.thisId = bplustree.fileManager.saveFile(this, bplustree.pageSerializer);
+    }
+    
+    /**
+     * for deep copy
+     * @param origin 
+     */
+    private BPlusPage(BPlusPage origin)
+    {
+        bytes       = new RecordFile(origin.bytes.array());
+        bplustree   = origin.bplustree;
+        thisId      = origin.thisId;
+        nextId      = origin.nextId;
+        prevId      = origin.prevId;
+        isLeaf      = origin.isLeaf;
+        keys        = new long[origin.keys.length];
+        System.arraycopy(origin.keys, 0, keys, 0, keys.length);
     }
     
     /**
@@ -169,8 +187,8 @@ public class BPlusPage
         return bytes.compacityUsed();
     }
 
-    Browser<Pair<Long, Object>> browse() 
-            throws IOException, FledPresistanceException
+    Browser<KeyValuePair<Long, Object>> browse() 
+            throws IOException, FledPersistenceException
     {
         if (isLeaf)
         {
@@ -182,8 +200,8 @@ public class BPlusPage
         }
     }
 
-    Browser<Pair<Long, Object>> browse(long id) 
-            throws FledPresistanceException, IOException 
+    Browser<KeyValuePair<Long, Object>> browse(long id) 
+            throws FledPersistenceException, IOException 
     {
         int index = findFirstLessOrEqualChild(id);
         if (isLeaf)
@@ -197,7 +215,7 @@ public class BPlusPage
     }
 
     Object select(long id)
-            throws FledPresistanceException, IOException 
+            throws FledPersistenceException, IOException 
     {
         int index = findFirstLessOrEqualChild(id);
         if (isLeaf)
@@ -215,7 +233,7 @@ public class BPlusPage
     }
 
     InsertResult insert(long key, Object record, boolean replace) 
-            throws IOException, FledPresistanceException
+            throws IOException, FledPersistenceException
     {
         long overFlowId = BPlusTree.NULL_PAGE;
         InsertResult result;
@@ -414,7 +432,7 @@ public class BPlusPage
         return result;
     }
 
-    DeleteResult delete(long key) throws IOException, FledPresistanceException
+    DeleteResult delete(long key) throws IOException, FledPersistenceException
     {
         DeleteResult result = null;
         int half = bplustree.maxRecords >> 1;
@@ -487,7 +505,8 @@ public class BPlusPage
                             // so far.
                             bplustree.savePage(this);
                             // @TODO statement
-                            throw new FledPresistanceException(LanguageStatements.NONE);
+                            throw new FledPersistenceException(
+                                    LanguageStatements.NONE.toString());
                         }
                         
                         System.arraycopy(brother.keys, 0, brother.keys, half - 1, half);
@@ -526,7 +545,8 @@ public class BPlusPage
                             if (child.nextId != brother.thisId)
                             {
                                 // @TODO statement
-                                throw new FledPresistanceException(LanguageStatements.NONE);
+                                throw new FledPersistenceException(
+                                        LanguageStatements.NONE.toString());
                             }
                             else
                             {
@@ -574,7 +594,8 @@ public class BPlusPage
                             // so far so its not completely corrupt
                             bplustree.savePage(this);
                             // @TODO statement
-                            throw new FledPresistanceException(LanguageStatements.NONE);
+                            throw new FledPersistenceException(
+                                    LanguageStatements.NONE.toString());
                         }
                         
 //                        child.copyValues(0, brother, half + 1, child.compacityUsed());
@@ -594,7 +615,8 @@ public class BPlusPage
                             if (brother.thisId != child.prevId)
                             {
                                 // @TODO statement
-                                throw new FledPresistanceException(LanguageStatements.NONE);
+                                throw new FledPersistenceException(
+                                        LanguageStatements.NONE.toString());
                             }
                             else
                             {
@@ -630,7 +652,7 @@ public class BPlusPage
     }
     
     public void truncate(int height) 
-            throws FledPresistanceException
+            throws FledPersistenceException
     {
         height--;
         if (height == 0)
@@ -648,6 +670,13 @@ public class BPlusPage
             }
         }
         bplustree.fileManager.deleteFile(thisId);
+    }
+
+    @Override
+    public Transactionable deepCopy(FileManager newManager) 
+    {
+        // dont need to do anything with the FileManager
+        return new BPlusPage(this);
     }
     
     protected int findFirstLessOrEqualChild(long key)
@@ -745,29 +774,6 @@ public class BPlusPage
         System.arraycopy(keys, index + 1, keys, index, keys.length - index - 1);
         keys[bytes.compacityUsed()] = 0;
     }
-
-//    private void copyValues(int start, BPlusPage dest, int destStart, int count) 
-//    {
-//        byte[][] work = new byte[count][];
-//        for(int i = 0; i < count; i++)
-//        {
-//            work[i] = bytes.read(start + i);
-//        }
-//        for(int i = 0; i < count; i++)
-//        {
-//            dest.bytes.write(work[i], destStart + i);
-//        }
-//        System.arraycopy(keys, start, dest.keys, destStart, count);
-//    }
-//    
-//    private void nullValues(int start, int count)
-//    {
-//        for(int i = start; i < start + count; i++)
-//        {
-//            bytes.remove(start);
-//            keys[i] = BPlusTree.NULL_PAGE;
-//        }
-//    }
     
     public static class BPlusPageSerializer implements Serializer<byte[]>
     {
@@ -824,7 +830,7 @@ public class BPlusPage
      * debugging purposes only.
      */
     public void dumpRecursive(int height)
-        throws FledPresistanceException
+        throws FledPersistenceException
     {
         dump(height);
         height++;

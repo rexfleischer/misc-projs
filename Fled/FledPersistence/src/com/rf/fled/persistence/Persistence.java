@@ -4,8 +4,6 @@
  */
 package com.rf.fled.persistence;
 
-import com.rf.fled.util.Pair;
-
 /**
  *
  * @author REx
@@ -20,32 +18,77 @@ public interface Persistence
      * @throws FledPresistanceException 
      */
     public Object insert(long id, Object record, boolean replace)
-            throws FledPresistanceException;
+            throws FledPersistenceException;
     
+    /**
+     * 
+     * @param id
+     * @return
+     * @throws FledPresistanceException 
+     */
     public Object delete(long id)
-            throws FledPresistanceException;
+            throws FledPersistenceException;
     
+    /**
+     * 
+     * @param id
+     * @return
+     * @throws FledPresistanceException 
+     */
     public Object select(long id)
-            throws FledPresistanceException;
+            throws FledPersistenceException;
     
-    public Browser<Pair<Long, Object>> browse(long id)
-            throws FledPresistanceException;
+    /**
+     * 
+     * @param id
+     * @return
+     * @throws FledPresistanceException 
+     */
+    public Browser<KeyValuePair<Long, Object>> browse(long id)
+            throws FledPersistenceException;
     
-    public Browser<Pair<Long, Object>> browse()
-            throws FledPresistanceException;
+    /**
+     * 
+     * @return
+     * @throws FledPresistanceException 
+     */
+    public Browser<KeyValuePair<Long, Object>> browse()
+            throws FledPersistenceException;
     
+    /**
+     * 
+     * @return
+     * @throws FledPresistanceException 
+     */
     public long size()
-            throws FledPresistanceException;
+            throws FledPersistenceException;
     
+    /**
+     * 
+     * @return
+     * @throws FledPresistanceException 
+     */
     public String getContext()
-            throws FledPresistanceException;
+            throws FledPersistenceException;
     
+    /**
+     * 
+     * @throws FledTransactionException 
+     */
     public void beginTransaction()
             throws FledTransactionException;
     
+    /**
+     * 
+     * @throws FledTransactionException 
+     */
     public void commit()
             throws FledTransactionException;
     
+    /**
+     * 
+     * @throws FledTransactionException 
+     */
     public void rollback()
             throws FledTransactionException;
     

@@ -2,15 +2,15 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.rf.fled.persistence.filemanager;
+package com.rf.fled.persistence.transaction;
 
 import com.rf.fled.persistence.FledTransactionException;
-import com.rf.fled.interfaces.Serializer;
 import com.rf.fled.persistence.Transactionable;
-import com.rf.fled.language.LanguageStatements;
 import com.rf.fled.persistence.FileManager;
-import com.rf.fled.persistence.FledPresistanceException;
-import com.rf.fled.util.Pair;
+import com.rf.fled.persistence.FledPersistenceException;
+import com.rf.fled.persistence.KeyValuePair;
+import com.rf.fled.persistence.Serializer;
+import com.rf.fled.persistence.localization.LanguageStatements;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -23,25 +23,25 @@ public class SimpleTransaction implements FileManager
 {
     private FileManager parent;
     
-    private HashMap<Long, Pair<Object, Serializer<byte[]>>> originIds;
+    private HashMap<Long, KeyValuePair<Object, Serializer<byte[]>>> originIds;
 
-    private HashMap<String, Pair<Object, Serializer<byte[]>>> originNamed;
+    private HashMap<String, KeyValuePair<Object, Serializer<byte[]>>> originNamed;
 
-    private HashMap<Long, Pair<Object, Serializer<byte[]>>> toUpdateIds;
+    private HashMap<Long, KeyValuePair<Object, Serializer<byte[]>>> toUpdateIds;
 
-    private HashMap<String, Pair<Object, Serializer<byte[]>>> toUpdateNamed;
+    private HashMap<String, KeyValuePair<Object, Serializer<byte[]>>> toUpdateNamed;
 
     private ArrayList<Long> toDeleteIds;
 
     private ArrayList<String> toDeleteNamed;
 
-    SimpleTransaction(FileManager parent) 
+    public SimpleTransaction(FileManager parent) 
     {
         this.parent     = parent;
-        originIds       = new HashMap<Long, Pair<Object, Serializer<byte[]>>>();
-        originNamed     = new HashMap<String, Pair<Object, Serializer<byte[]>>>();
-        toUpdateIds     = new HashMap<Long, Pair<Object, Serializer<byte[]>>>();
-        toUpdateNamed   = new HashMap<String, Pair<Object, Serializer<byte[]>>>();
+        originIds       = new HashMap<Long, KeyValuePair<Object, Serializer<byte[]>>>();
+        originNamed     = new HashMap<String, KeyValuePair<Object, Serializer<byte[]>>>();
+        toUpdateIds     = new HashMap<Long, KeyValuePair<Object, Serializer<byte[]>>>();
+        toUpdateNamed   = new HashMap<String, KeyValuePair<Object, Serializer<byte[]>>>();
         toDeleteIds     = new ArrayList<Long>();
         toDeleteNamed   = new ArrayList<String>();
     }
@@ -61,11 +61,11 @@ public class SimpleTransaction implements FileManager
 
     @Override
     public Object loadFile(long id, Serializer<byte[]> serializer) 
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         if (toUpdateIds.containsKey(id))
         {
-            return toUpdateIds.get(id).getLeft();
+            return toUpdateIds.get(id).getKey();
         }
         if (toDeleteIds.contains(id))
         {
@@ -73,27 +73,28 @@ public class SimpleTransaction implements FileManager
         }
         if (originIds.containsKey(id))
         {
-            return originIds.get(id);
+            return originIds.get(id).getKey();
         }
         Object data = parent.loadFile(id, serializer);
         if (!(data instanceof Transactionable))
         {
             // @TODO statement
-            throw new FledPresistanceException(LanguageStatements.NONE);
+            throw new FledPersistenceException(
+                    LanguageStatements.NONE.toString());
         }
         Transactionable origin = (Transactionable) data;
-        originIds.put(id, new Pair<Object, Serializer<byte[]>>(origin, serializer));
+        originIds.put(id, new KeyValuePair<Object, Serializer<byte[]>>(origin, serializer));
 
         return origin.deepCopy(this);
     }
 
     @Override
     public Object loadNamedFile(String name, Serializer<byte[]> serializer) 
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         if (toUpdateNamed.containsKey(name))
         {
-            return toUpdateNamed.get(name).getLeft();
+            return toUpdateNamed.get(name).getKey();
         }
         if (toDeleteNamed.contains(name))
         {
@@ -107,48 +108,49 @@ public class SimpleTransaction implements FileManager
         if (!(data instanceof Transactionable))
         {
             // @TODO statement
-            throw new FledPresistanceException(LanguageStatements.NONE);
+            throw new FledPersistenceException(
+                    LanguageStatements.NONE.toString());
         }
         Transactionable origin = (Transactionable) data;
-        originNamed.put(name, new Pair<Object, Serializer<byte[]>>(origin, serializer));
+        originNamed.put(name, new KeyValuePair<Object, Serializer<byte[]>>(origin, serializer));
 
         return origin.deepCopy(parent);
     }
 
     @Override
     public void updateFile(long id, Object data, Serializer<byte[]> serializer) 
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         if (toDeleteIds.contains(id))
         {
             toDeleteIds.remove(id);
         }
-        toUpdateIds.put(id, new Pair<Object,Serializer<byte[]>>(data, serializer));
+        toUpdateIds.put(id, new KeyValuePair<Object,Serializer<byte[]>>(data, serializer));
     }
 
     @Override
     public long saveFile(Object data, Serializer<byte[]> serializer) 
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         long id = parent.incFileCount();
-        toUpdateIds.put(id, new Pair<Object,Serializer<byte[]>>(data, serializer));
+        toUpdateIds.put(id, new KeyValuePair<Object,Serializer<byte[]>>(data, serializer));
         return id;
     }
 
     @Override
     public void saveNamedFile(String name, Object data, Serializer<byte[]> serializer) 
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         if (toDeleteNamed.contains(name))
         {
             toDeleteNamed.remove(name);
         }
-        toUpdateNamed.put(name, new Pair<Object,Serializer<byte[]>>(data, serializer));
+        toUpdateNamed.put(name, new KeyValuePair<Object,Serializer<byte[]>>(data, serializer));
     }
 
     @Override
     public void deleteFile(long id) 
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         if (toUpdateIds.containsKey(id))
         {
@@ -162,7 +164,7 @@ public class SimpleTransaction implements FileManager
 
     @Override
     public void deleteNamedFile(String name) 
-            throws FledPresistanceException 
+            throws FledPersistenceException 
     {
         if (toUpdateNamed.containsKey(name))
         {
@@ -192,8 +194,8 @@ public class SimpleTransaction implements FileManager
                 {
                     String id = it.next();
                     named.add(id);
-                    Pair<Object, Serializer<byte[]>> pair = toUpdateNamed.get(id);
-                    parent.saveNamedFile(id, pair.getLeft(), pair.getRight());
+                    KeyValuePair<Object, Serializer<byte[]>> pair = toUpdateNamed.get(id);
+                    parent.saveNamedFile(id, pair.getKey(), pair.getValue());
                 }
             }
 
@@ -203,8 +205,8 @@ public class SimpleTransaction implements FileManager
                 {
                     Long id = it.next();
                     ided.add(id);
-                    Pair<Object, Serializer<byte[]>> pair = toUpdateIds.get(id);
-                    parent.updateFile(id, pair.getLeft(), pair.getRight());
+                    KeyValuePair<Object, Serializer<byte[]>> pair = toUpdateIds.get(id);
+                    parent.updateFile(id, pair.getKey(), pair.getValue());
                 }
             }
 
@@ -237,14 +239,14 @@ public class SimpleTransaction implements FileManager
                 while(it.hasNext())
                 {
                     String name = it.next();
-                    Pair<Object, Serializer<byte[]>> pair = originNamed.get(name);
+                    KeyValuePair<Object, Serializer<byte[]>> pair = originNamed.get(name);
                     if (pair != null)
                     {
                         try 
                         {
-                            parent.saveNamedFile(name, pair.getLeft(), pair.getRight());
+                            parent.saveNamedFile(name, pair.getKey(), pair.getValue());
                         } 
-                        catch (FledPresistanceException ex1) { }
+                        catch (FledPersistenceException ex1) { }
                     }
                 }
             }
@@ -254,18 +256,19 @@ public class SimpleTransaction implements FileManager
                 while(it.hasNext())
                 {
                     Long id = it.next();
-                    Pair<Object, Serializer<byte[]>> pair = originIds.get(id);
+                    KeyValuePair<Object, Serializer<byte[]>> pair = originIds.get(id);
                     if (pair != null)
                     {
                         try 
                         {
-                            parent.updateFile(id, pair.getLeft(), pair.getRight());
+                            parent.updateFile(id, pair.getKey(), pair.getValue());
                         } 
-                        catch (FledPresistanceException ex1){ }
+                        catch (FledPersistenceException ex1){ }
                     }
                 }
                 // @TODO statement
-                throw new FledTransactionException(LanguageStatements.NONE, ex);
+                throw new FledTransactionException(
+                        LanguageStatements.NONE.toString(), ex);
             }
         }
     }
@@ -274,10 +277,10 @@ public class SimpleTransaction implements FileManager
     public void rollback()
             throws FledTransactionException 
     {
-        originIds       = new HashMap<Long, Pair<Object, Serializer<byte[]>>>();
-        originNamed     = new HashMap<String, Pair<Object, Serializer<byte[]>>>();
-        toUpdateIds     = new HashMap<Long, Pair<Object, Serializer<byte[]>>>();
-        toUpdateNamed   = new HashMap<String, Pair<Object, Serializer<byte[]>>>();
+        originIds       = new HashMap<Long, KeyValuePair<Object, Serializer<byte[]>>>();
+        originNamed     = new HashMap<String, KeyValuePair<Object, Serializer<byte[]>>>();
+        toUpdateIds     = new HashMap<Long, KeyValuePair<Object, Serializer<byte[]>>>();
+        toUpdateNamed   = new HashMap<String, KeyValuePair<Object, Serializer<byte[]>>>();
         toDeleteIds     = new ArrayList<Long>();
         toDeleteNamed   = new ArrayList<String>();
     }
