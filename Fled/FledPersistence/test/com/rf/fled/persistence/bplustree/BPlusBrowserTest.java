@@ -2,14 +2,13 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.rf.fled.persistence.transaction;
+package com.rf.fled.persistence.bplustree;
 
 import com.rf.fled.persistence.Browser;
 import com.rf.fled.persistence.filemanager.FileManager;
 import com.rf.fled.persistence.FledPersistenceException;
 import com.rf.fled.persistence.KeyValuePair;
 import com.rf.fled.persistence.Persistence;
-import com.rf.fled.persistence.bplustree.BPlusTree;
 import com.rf.fled.persistence.filemanager.FileManager_FileSystemNoTree;
 import java.io.File;
 import java.util.Random;
@@ -24,11 +23,11 @@ import org.junit.Test;
  *
  * @author REx
  */
-public class TransactionPersistenceTest {
+public class BPlusBrowserTest {
     
     public static final String DIRECTORY = "C:/Users/REx/Desktop/fledhome/data";
     
-    public TransactionPersistenceTest() {
+    public BPlusBrowserTest() {
     }
 
     @BeforeClass
@@ -52,25 +51,23 @@ public class TransactionPersistenceTest {
     public void tearDown() {
     }
     
-    public Persistence buildSimpleTransactionWraping(int count) throws FledPersistenceException
+    public Persistence getBPlusTree(int count) throws FledPersistenceException 
     {
         FileManager fileManager = new FileManager_FileSystemNoTree(DIRECTORY, 0);
-//        FileManager fileManager = new FileManager_InMemory();
         Persistence instance = BPlusTree.createBPlusTree(fileManager, "test", count, null, null);
-        Persistence result = new TransactionPersistence(fileManager, instance);
-        return result;
+        return instance;
     }
     
-//    @Test
-    public void testTransactionWraping() throws Exception
+    @Test
+    public void happyPath() throws Exception
     {
-        System.out.println("testTransactionWraping");
-        Persistence instance = buildSimpleTransactionWraping(64);
+        System.out.println("happyPath");
         
+        Persistence instance = getBPlusTree(64);
         Random random = new Random();
         
-        int count = 10001;
-        int check = 500;
+        int count = 1001;
+        int check = 100;
         
         for(int i = 0; i < count; i++)
         {
@@ -85,44 +82,47 @@ public class TransactionPersistenceTest {
             }
         }
         
-        System.out.println("number of records: " + instance.size());
+        KeyValuePair<Long, Object> iterator = null;
+        long keyat = 0;
+        int counter = 1;// start at one because of curr
         
-        instance.truncate();
-    }
-    
-    @Test
-    public void testTransactionalInserts() throws Exception
-    {
-        System.out.println("testTransactionWraping");
-        Persistence instance = buildSimpleTransactionWraping(512);
-        
-        Random random = new Random();
-        
-        int count = 10001;
-        int check = 1000;
-        int commit = 10;
-        
-        instance.beginTransaction();
-        for(int i = 0; i < count; i++)
+        Browser<KeyValuePair<Long, Object>> browserForward = instance.browse();
+        iterator = new KeyValuePair<Long, Object>();
+        Assert.assertTrue(browserForward.curr(iterator));
+        while(browserForward.next(iterator))
         {
-            int randomValue = random.nextInt(200000000) + 1;
-            MockValue value = new MockValue();
-            value.id = randomValue;
-            value.content = "hello world number " + randomValue;
-            instance.insert(randomValue, value, true);
-            if (i % check == 0)
+            Assert.assertTrue(keyat < iterator.getKey());
+            Assert.assertTrue(iterator.getValue() instanceof MockValue);
+            keyat = iterator.getKey();
+            counter++;
+            if (counter % 100 == 0)
             {
-                System.out.println("inserted " + i + " records");
-            }
-            if (i % commit == 0)
-            {
-                instance.commit();
-                instance.beginTransaction();
+                System.out.println("read " + counter + " records");
             }
         }
-        instance.commit();
+        Assert.assertEquals(counter, instance.size());
+        
+        // now go backwards
+        Browser<KeyValuePair<Long, Object>> browserBackward = 
+                instance.browse(Long.MAX_VALUE);// get end of tree
+        iterator = new KeyValuePair<Long, Object>();
+        counter = 1;
+        Assert.assertTrue(browserBackward.curr(iterator));
+        while(browserBackward.prev(iterator))
+        {
+            Assert.assertTrue(keyat > iterator.getKey());
+            Assert.assertTrue(iterator.getValue() instanceof MockValue);
+            keyat = iterator.getKey();
+            counter++;
+            if (counter % 100 == 0)
+            {
+                System.out.println("read " + counter + " records");
+            }
+        }
+        Assert.assertEquals(counter, instance.size());
         
         System.out.println("number of records: " + instance.size());
+        
         
         instance.truncate();
     }

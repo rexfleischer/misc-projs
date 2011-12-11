@@ -2,9 +2,10 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.rf.fled.persistence.provider;
+package com.rf.fled.persistence;
 
-import com.rf.fled.persistence.FileManager;
+import com.rf.fled.persistence.filemanager.FileManagerUpdate;
+import com.rf.fled.persistence.filemanager.FileManager;
 import com.rf.fled.persistence.FledPersistenceException;
 import com.rf.fled.persistence.Persistence;
 import com.rf.fled.persistence.Serializer;
@@ -191,35 +192,6 @@ public class FledPersistenceProvider implements Externalizable
         return result;
     }
     
-    private Observer FileManagerObserver = new Observer() 
-    {
-        @Override
-        public void update(Observable o, Object arg) 
-        {
-            if (!(arg instanceof FileManagerUpdate))
-            {
-                return;
-            }
-            FileManagerUpdate update = (FileManagerUpdate) arg;
-            if (o instanceof FileManager_FileSystemNoTree)
-            {
-                switch(update.updateType)
-                {
-                    case RECORD_COUNT_AT:
-                        
-                        break;
-                    default:
-                        // do nothing
-                        break;
-                }
-            }
-            else if (o instanceof FileManager_InMemory)
-            {
-                
-            }
-        }
-    };
-    
     /**
      * the root directory. this provider needs to have complete control
      * over the file structure from here.
@@ -246,6 +218,41 @@ public class FledPersistenceProvider implements Externalizable
      * are saved and kept track of. 
      */
     private HashMap<String, FileManagerData> fileManagerData;
+    
+    private Observer FileManagerObserver = new Observer() 
+    {
+        @Override
+        public void update(Observable o, Object arg) 
+        {
+            if (!(arg instanceof FileManagerUpdate))
+            {
+                return;
+            }
+            FileManagerUpdate update = (FileManagerUpdate) arg;
+            if (o instanceof FileManager_FileSystemNoTree)
+            {
+                switch(update.updateType)
+                {
+                    case RECORD_COUNT_AT:
+                        FileManagerData data = fileManagerData.get(update.context);
+                        if (data == null)
+                        {
+                            throw new IllegalArgumentException(
+                                    "invalid update.context");
+                        }
+                        data.recordCountAt = (Long) update.info;
+                        break;
+                    default:
+                        throw new IllegalArgumentException(
+                                "invalid update.updateType");
+                }
+            }
+            else if (o instanceof FileManager_InMemory)
+            {
+                // nothing to update
+            }
+        }
+    };
     
     private FledPersistenceProvider(){ }
     

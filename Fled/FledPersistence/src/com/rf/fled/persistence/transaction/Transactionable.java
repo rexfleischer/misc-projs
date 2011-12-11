@@ -2,7 +2,9 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.rf.fled.persistence;
+package com.rf.fled.persistence.transaction;
+
+import com.rf.fled.persistence.filemanager.FileManager;
 
 /**
  * optional extension to Persistence

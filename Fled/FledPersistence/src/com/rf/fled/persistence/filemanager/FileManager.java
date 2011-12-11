@@ -2,7 +2,11 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.rf.fled.persistence;
+package com.rf.fled.persistence.filemanager;
+
+import com.rf.fled.persistence.FledPersistenceException;
+import com.rf.fled.persistence.FledTransactionException;
+import com.rf.fled.persistence.Serializer;
 
 /**
  *

@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.rf.fled.persistence.provider;
+package com.rf.fled.persistence.filemanager;
 
 /**
  *
@@ -10,5 +10,5 @@ package com.rf.fled.persistence.provider;
  */
 public enum FileManagerUpdateType 
 {
-        RECORD_COUNT_AT,
+    RECORD_COUNT_AT,
 }

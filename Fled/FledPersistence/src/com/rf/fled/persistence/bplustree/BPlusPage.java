@@ -4,12 +4,12 @@
  */
 package com.rf.fled.persistence.bplustree;
 
-import com.rf.fled.persistence.FileManager;
+import com.rf.fled.persistence.filemanager.FileManager;
 import com.rf.fled.persistence.FledPersistenceException;
 import com.rf.fled.persistence.Browser;
 import com.rf.fled.persistence.KeyValuePair;
 import com.rf.fled.persistence.Serializer;
-import com.rf.fled.persistence.Transactionable;
+import com.rf.fled.persistence.transaction.Transactionable;
 import com.rf.fled.persistence.fileio.ByteArray;
 import com.rf.fled.persistence.fileio.RecordFile;
 import com.rf.fled.persistence.localization.LanguageStatements;
@@ -210,7 +210,7 @@ public class BPlusPage implements Transactionable
         }
         else
         {
-            return bplustree.loadPage(getChildId(index)).browse();
+            return bplustree.loadPage(getChildId(index)).browse(id);
         }
     }
 
@@ -319,7 +319,6 @@ public class BPlusPage implements Transactionable
                 {
                     insertEntry(key, record, index+1);
                 }
-//                insertEntry(key, record, index+1);
             }
             else
             {
@@ -331,7 +330,6 @@ public class BPlusPage implements Transactionable
                 {
                     insertChild(key, overFlowId, index+1);
                 }
-//                insertChild(key, overFlowId, index+1);
             }
             
             bplustree.savePage(this);
@@ -416,7 +414,13 @@ public class BPlusPage implements Transactionable
                 // if there is a next bucket, then we need to link it
                 BPlusPage nextPage = bplustree.loadPage(nextId);
                 
-                nextPage.prevId = newPage.nextId;
+                // basically, this is what needs to happen
+                // 
+                // split -> newPage
+                // split <- newPage -> nextPage
+                // newPage <- nextPage
+                
+                nextPage.prevId = newPage.thisId;
                 newPage.nextId = nextPage.thisId;
                 
                 bplustree.savePage(nextPage);

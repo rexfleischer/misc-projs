@@ -4,7 +4,7 @@
  */
 package com.rf.fled.persistence.cache;
 
-import com.rf.fled.persistence.FileManager;
+import com.rf.fled.persistence.filemanager.FileManager;
 import com.rf.fled.persistence.FledPersistenceException;
 import com.rf.fled.persistence.FledTransactionException;
 import com.rf.fled.persistence.Serializer;
@@ -15,41 +15,58 @@ import com.rf.fled.persistence.Serializer;
  */
 public class FileCache_Memory implements FileManager
 {
-    private SoftHashMap idCache;
-    
-    private SoftHashMap nameCache;
+    private SoftHashMap cache;
     
     private FileManager parent;
+    
+    private final Object LOCK;
     
     public FileCache_Memory(FileManager parent)
     {
         this.parent = parent;
+        this.cache  = new SoftHashMap();
+        this.LOCK   = new Object();
     }
 
     @Override
     public Object loadFile(long id, Serializer<byte[]> serializer) 
             throws FledPersistenceException 
     {
-        Object cache = idCache.get(id);
-        if (cache == null)
+        Object result = null;
+        synchronized(LOCK)
         {
-            cache = parent.loadFile(id, serializer);
-            idCache.put(id, cache);
+            cache.get(id);
         }
-        return cache;
+        if (result == null)
+        {
+            // we dont want to syncronize a file read here
+            result = parent.loadFile(id, serializer);
+            synchronized(LOCK)
+            {
+                cache.put(id, result);
+            }
+        }
+        return result;
     }
 
     @Override
     public Object loadNamedFile(String name, Serializer<byte[]> serializer)
             throws FledPersistenceException
     {
-        Object cache = nameCache.get(name);
-        if (cache == null)
+        Object result = null;
+        synchronized(LOCK)
         {
-            cache = parent.loadNamedFile(name, serializer);
-            idCache.put(name, cache);
+            cache.get(name);
         }
-        return cache;
+        if (result == null)
+        {
+            result = parent.loadNamedFile(name, serializer);
+            synchronized(LOCK)
+            {
+                cache.put(name, result);
+            }
+        }
+        return result;
     }
 
     @Override
@@ -57,7 +74,10 @@ public class FileCache_Memory implements FileManager
             throws FledPersistenceException 
     {
         parent.saveNamedFile(name, data, serializer);
-        nameCache.put(name, data);
+        synchronized(LOCK)
+        {
+            cache.put(name, data);
+        }
     }
 
     @Override
@@ -65,7 +85,10 @@ public class FileCache_Memory implements FileManager
             throws FledPersistenceException 
     {
         long id = parent.saveFile(data, serializer);
-        idCache.put(id, data);
+        synchronized(LOCK)
+        {
+            cache.put(id, data);
+        }
         return id;
     }
 
@@ -74,7 +97,32 @@ public class FileCache_Memory implements FileManager
             throws FledPersistenceException 
     {
         parent.updateFile(id, data, serializer);
-        idCache.put(id, data);
+        synchronized(LOCK)
+        {
+            cache.put(id, data);
+        }
+    }
+
+    @Override
+    public void deleteFile(long id) 
+            throws FledPersistenceException 
+    {
+        parent.deleteFile(id);
+        synchronized(LOCK)
+        {
+            cache.remove(id);
+        }
+    }
+
+    @Override
+    public void deleteNamedFile(String name) 
+            throws FledPersistenceException 
+    {
+        parent.deleteNamedFile(name);
+        synchronized(LOCK)
+        {
+            cache.remove(name);
+        }
     }
 
     @Override
@@ -96,22 +144,6 @@ public class FileCache_Memory implements FileManager
             throws FledTransactionException
     {
         parent.rollback();
-    }
-
-    @Override
-    public void deleteFile(long id) 
-            throws FledPersistenceException 
-    {
-        parent.deleteFile(id);
-        idCache.remove(id);
-    }
-
-    @Override
-    public void deleteNamedFile(String name) 
-            throws FledPersistenceException 
-    {
-        parent.deleteNamedFile(name);
-        nameCache.remove(name);
     }
 
     @Override

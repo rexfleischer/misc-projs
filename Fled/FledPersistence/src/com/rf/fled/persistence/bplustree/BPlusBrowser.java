@@ -8,6 +8,7 @@ import com.rf.fled.persistence.FledPersistenceException;
 import com.rf.fled.persistence.Browser;
 import com.rf.fled.persistence.KeyValuePair;
 import com.rf.fled.persistence.localization.LanguageStatements;
+import java.io.IOException;
 
 /**
  * 
@@ -63,7 +64,15 @@ public class BPlusBrowser implements Browser<KeyValuePair<Long, Object>>
             if (pair != null)
             {
                 pair.setKey(page.getKey(index));
-                pair.setValue(page.getValue(index));
+                try 
+                {
+                    pair.setValue(bplustree.deserializeValue(page.getValue(index)));
+                } 
+                catch (IOException ex)
+                {
+                    throw new FledPersistenceException(
+                            LanguageStatements.NONE.toString(), ex);
+                }
             }
             return true;
         }
@@ -82,14 +91,22 @@ public class BPlusBrowser implements Browser<KeyValuePair<Long, Object>>
         {
             // if it is, then just return
             pair.setKey(page.getKey(index));
-            pair.setValue(page.getValue(index));
+            try 
+            {
+                pair.setValue(bplustree.deserializeValue(page.getValue(index)));
+            } 
+            catch (IOException ex)
+            {
+                throw new FledPersistenceException(
+                        LanguageStatements.NONE.toString(), ex);
+            }
             return true;
         }
         else
         {
             // check to see if the next bucket is 0. if it is 0, then we
             // know that we got to the end of the tree
-            if (page.getNextId() != 0)
+            if (page.getNextId() == BPlusTree.NULL_PAGE)
             {
                 return false;
             }
@@ -115,7 +132,15 @@ public class BPlusBrowser implements Browser<KeyValuePair<Long, Object>>
             
             // if we get here, then we are finished
             pair.setKey(page.getKey(index));
-            pair.setValue(page.getValue(index));
+            try 
+            {
+                pair.setValue(bplustree.deserializeValue(page.getValue(index)));
+            } 
+            catch (IOException ex)
+            {
+                throw new FledPersistenceException(
+                        LanguageStatements.NONE.toString(), ex);
+            }
             return true;
         }
     }
@@ -155,7 +180,15 @@ public class BPlusBrowser implements Browser<KeyValuePair<Long, Object>>
         
         // if we get here... we're good
         pair.setKey(page.getKey(index));
-        pair.setValue(page.getValue(index));
+        try 
+        {
+            pair.setValue(bplustree.deserializeValue(page.getValue(index)));
+        } 
+        catch (IOException ex)
+        {
+            throw new FledPersistenceException(
+                    LanguageStatements.NONE.toString(), ex);
+        }
         return true;
     }
 }

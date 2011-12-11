@@ -6,12 +6,10 @@ package com.rf.fled.persistence.filemanager;
 
 import com.rf.fled.persistence.transaction.SimpleTransaction;
 import com.rf.fled.persistence.FledTransactionException;
-import com.rf.fled.persistence.FileManager;
 import com.rf.fled.persistence.FledPersistenceException;
 import com.rf.fled.persistence.Serializer;
 import java.util.HashMap;
 import java.util.Observable;
-import java.util.Observer;
 
 /**
  *
@@ -19,26 +17,42 @@ import java.util.Observer;
  */
 public class FileManager_InMemory extends Observable implements FileManager
 {
-    private HashMap<Long, Object> keyedFiles;
+    private HashMap<Object, Object> files;
     
-    private HashMap<String, Object> namedFiles;
+    private String context;
     
     private Long count;
     
+    private final Object LOCK;
+    
+    public FileManager_InMemory(String context)
+    {
+        this.files  = new HashMap<Object, Object>();
+        this.count  = 0l;
+        this.context= context;
+        this.LOCK   = new Object();
+    }
+    
     public FileManager_InMemory()
     {
-        keyedFiles  = new HashMap<Long, Object>();
-        namedFiles  = new HashMap<String, Object>();
-        count       = 0l;
+        this(null);
     }
 
     @Override
     public long incFileCount() 
     {
         long result = 0;
-        synchronized(count)
+        synchronized(LOCK)
         {
             count++;
+            if (context != null)
+            {
+                FileManagerUpdate update = new FileManagerUpdate();
+                update.updateType = FileManagerUpdateType.RECORD_COUNT_AT;
+                update.context = context;
+                update.info = count;
+                notifyObservers(update);
+            }
             result = count;
         }
         return result;
@@ -69,14 +83,22 @@ public class FileManager_InMemory extends Observable implements FileManager
     public Object loadFile(long id, Serializer<byte[]> serializer)
             throws FledPersistenceException 
     {
-        return keyedFiles.get(id);
+        Object result = null;
+        synchronized(LOCK)
+        {
+            result = files.get(id);
+        }
+        return result;
     }
 
     @Override
     public void updateFile(long id, Object data, Serializer<byte[]> serializer)
             throws FledPersistenceException
     {
-        keyedFiles.put(id, data);
+        synchronized(LOCK)
+        {
+            files.put(id, data);
+        }
     }
 
     @Override
@@ -84,7 +106,10 @@ public class FileManager_InMemory extends Observable implements FileManager
             throws FledPersistenceException 
     {
         long id = incFileCount();
-        keyedFiles.put(id, data);
+        synchronized(LOCK)
+        {
+            files.put(id, data);
+        }
         return id;
     }
 
@@ -92,28 +117,42 @@ public class FileManager_InMemory extends Observable implements FileManager
     public void deleteFile(long id) 
             throws FledPersistenceException 
     {
-        keyedFiles.remove(id);
+        synchronized(LOCK)
+        {
+            files.remove(id);
+        }
     }
 
     @Override
     public Object loadNamedFile(String name, Serializer<byte[]> serializer) 
             throws FledPersistenceException 
     {
-        return namedFiles.get(name);
+        Object result = null;
+        synchronized(LOCK)
+        {
+            result = files.get(name);
+        }
+        return result;
     }
 
     @Override
     public void saveNamedFile(String name, Object data, Serializer<byte[]> serializer) 
             throws FledPersistenceException 
     {
-        namedFiles.put(name, data);
+        synchronized(LOCK)
+        {
+            files.put(name, data);
+        }
     }
 
     @Override
     public void deleteNamedFile(String name) 
             throws FledPersistenceException 
     {
-        namedFiles.remove(name);
+        synchronized(LOCK)
+        {
+            files.remove(name);
+        }
     }
     
 }

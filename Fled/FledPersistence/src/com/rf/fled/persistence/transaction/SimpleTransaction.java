@@ -5,8 +5,7 @@
 package com.rf.fled.persistence.transaction;
 
 import com.rf.fled.persistence.FledTransactionException;
-import com.rf.fled.persistence.Transactionable;
-import com.rf.fled.persistence.FileManager;
+import com.rf.fled.persistence.filemanager.FileManager;
 import com.rf.fled.persistence.FledPersistenceException;
 import com.rf.fled.persistence.KeyValuePair;
 import com.rf.fled.persistence.Serializer;

@@ -6,8 +6,9 @@ package com.rf.fled.persistence.bplustree;
 
 import com.rf.fled.persistence.FledPersistenceException;
 import com.rf.fled.persistence.Persistence;
-import com.rf.fled.persistence.FileManager;
+import com.rf.fled.persistence.filemanager.FileManager;
 import com.rf.fled.persistence.filemanager.FileManager_FileSystemNoTree;
+import com.rf.fled.persistence.filemanager.FileManager_InMemory;
 import java.io.File;
 import java.util.Random;
 import junit.framework.Assert;
@@ -56,8 +57,8 @@ public class BPlusTreeTest {
     
     public Persistence getBPlusTree(int count) throws FledPersistenceException 
     {
-        FileManager fileManager = new FileManager_FileSystemNoTree(DIRECTORY, 0);
-//        FileManager fileManager = new FileManager_InMemory();
+//        FileManager fileManager = new FileManager_FileSystemNoTree(DIRECTORY, 0);
+        FileManager fileManager = new FileManager_InMemory();
         Persistence instance = BPlusTree.createBPlusTree(fileManager, "test", count, null, null);
         return instance;
     }

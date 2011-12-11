@@ -6,7 +6,6 @@ package com.rf.fled.persistence.filemanager;
 
 import com.rf.fled.persistence.transaction.SimpleTransaction;
 import com.rf.fled.persistence.fileio.ByteSerializer;
-import com.rf.fled.persistence.FileManager;
 import com.rf.fled.persistence.FledPersistenceException;
 import com.rf.fled.persistence.FledTransactionException;
 import com.rf.fled.persistence.Serializer;
@@ -28,14 +27,27 @@ public class FileManager_FileSystemNoTree extends Observable implements FileMana
 {
     private String directory;
     
+    private String context;
+    
     private final Object LOCK;
     
     private long fileCount;
     
-    public FileManager_FileSystemNoTree(String directory, long fileCount)
+    public FileManager_FileSystemNoTree(
+            String directory, String context, long fileCount)
     {
         this.directory  = directory;
         this.fileCount  = fileCount;
+        this.context    = context;
+        LOCK = new Object();
+    }
+    
+    public FileManager_FileSystemNoTree(
+            String directory, long fileCount)
+    {
+        this.directory  = directory;
+        this.fileCount  = fileCount;
+        this.context    = null;
         LOCK = new Object();
     }
 
@@ -214,7 +226,15 @@ public class FileManager_FileSystemNoTree extends Observable implements FileMana
     { 
         synchronized(LOCK)
         { 
-            fileCount++; 
+            fileCount++;
+            if (context != null)
+            {
+                FileManagerUpdate update = new FileManagerUpdate();
+                update.updateType = FileManagerUpdateType.RECORD_COUNT_AT;
+                update.context = context;
+                update.info = fileCount;
+                notifyObservers(update);
+            }
             return fileCount; 
         }
     }
