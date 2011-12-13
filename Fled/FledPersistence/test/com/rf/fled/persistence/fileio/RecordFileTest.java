@@ -4,7 +4,8 @@
  */
 package com.rf.fled.persistence.fileio;
 
-import com.rf.fled.persistence.fileio.RecordFile;
+import com.rf.fled.persistence.util.ByteSerializer;
+import com.rf.fled.persistence.util.RecordFile;
 import junit.framework.Assert;
 import org.junit.After;
 import org.junit.AfterClass;

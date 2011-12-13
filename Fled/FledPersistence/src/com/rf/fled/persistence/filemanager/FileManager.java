@@ -79,29 +79,11 @@ public interface FileManager
     /**
      * 
      * @param name
-     * @param serializer
-     * @return
-     * @throws FledPresistanceException 
-     */
-    public Object loadNamedFile(String context, Serializer<byte[]> serializer)
-            throws FledPersistenceException;
-    
-    /**
-     * 
-     * @param name
      * @param data
      * @param serializer
      * @throws FledPresistanceException 
      */
-    public void saveNamedFile(String context, Object data, Serializer<byte[]> serializer)
-            throws FledPersistenceException;
-    
-    /**
-     * 
-     * @param name
-     * @throws FledPresistanceException 
-     */
-    public void deleteNamedFile(String context)
+    public void updateParentFile(Object data, Serializer<byte[]> serializer)
             throws FledPersistenceException;
     
     /**
@@ -109,4 +91,8 @@ public interface FileManager
      * @return 
      */
     long incFileCount();
+    
+    long getFileCount();
+    
+    String getDirectory();
 }

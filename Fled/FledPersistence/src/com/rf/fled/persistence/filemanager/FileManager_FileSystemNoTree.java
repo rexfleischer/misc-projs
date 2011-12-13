@@ -4,8 +4,7 @@
  */
 package com.rf.fled.persistence.filemanager;
 
-import com.rf.fled.persistence.transaction.SimpleTransaction;
-import com.rf.fled.persistence.fileio.ByteSerializer;
+import com.rf.fled.persistence.util.ByteSerializer;
 import com.rf.fled.persistence.FledPersistenceException;
 import com.rf.fled.persistence.FledTransactionException;
 import com.rf.fled.persistence.Serializer;
@@ -17,40 +16,44 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Observable;
 
 /**
  *
  * @author REx
  */
-public class FileManager_FileSystemNoTree extends Observable implements FileManager
+public class FileManager_FileSystemNoTree implements FileManager
 {
     private String directory;
     
-    private String context;
+    private String parentName;
     
     private final Object LOCK;
     
-    private long fileCount;
-    
+    private long counter;
+
     public FileManager_FileSystemNoTree(
-            String directory, String context, long fileCount)
+            String directory, 
+            String parentName, 
+            long counter) 
     {
         this.directory  = directory;
-        this.fileCount  = fileCount;
-        this.context    = context;
-        LOCK = new Object();
-    }
-    
-    public FileManager_FileSystemNoTree(
-            String directory, long fileCount)
-    {
-        this.directory  = directory;
-        this.fileCount  = fileCount;
-        this.context    = null;
-        LOCK = new Object();
+        this.counter    = counter;
+        this.parentName = parentName;
+        this.LOCK       = new Object();
     }
 
+    @Override
+    public long getFileCount() 
+    {
+        return counter;
+    }
+
+    @Override
+    public String getDirectory() 
+    {
+        return directory;
+    }
+    
     @Override
     public FileManager beginTransaction() 
             throws FledTransactionException
@@ -163,54 +166,14 @@ public class FileManager_FileSystemNoTree extends Observable implements FileMana
     }
 
     @Override
-    public Object loadNamedFile(String name, Serializer<byte[]> serializer) 
-            throws FledPersistenceException 
-    {
-        Object result = null;
-        try
-        {
-            synchronized(LOCK)
-            {
-                result = loadFile0(buildFileName(name), serializer);
-            }
-        }
-        catch(Exception ex)
-        {
-            // @TODO statement
-            throw new FledPersistenceException(
-                    LanguageStatements.NONE.toString(), ex);
-        }
-        return result;
-    }
-
-    @Override
-    public void saveNamedFile(String name, Object data, Serializer<byte[]> serializer) 
+    public void updateParentFile(Object data, Serializer<byte[]> serializer) 
             throws FledPersistenceException 
     {
         try
         {
             synchronized(LOCK)
             {
-                writeFile0(buildFileName(name), data, serializer);
-            }
-        }
-        catch(Exception ex)
-        {
-            // @TODO statement
-            throw new FledPersistenceException(
-                    LanguageStatements.NONE.toString(), ex);
-        }
-    }
-
-    @Override
-    public void deleteNamedFile(String name) 
-            throws FledPersistenceException 
-    {
-        try
-        {
-            synchronized(LOCK)
-            {
-                deleteFile0(buildFileName(name));
+                writeFile0(buildParentName(), data, serializer);
             }
         }
         catch(Exception ex)
@@ -226,27 +189,19 @@ public class FileManager_FileSystemNoTree extends Observable implements FileMana
     { 
         synchronized(LOCK)
         { 
-            fileCount++;
-            if (context != null)
-            {
-                FileManagerUpdate update = new FileManagerUpdate();
-                update.updateType = FileManagerUpdateType.RECORD_COUNT_AT;
-                update.context = context;
-                update.info = fileCount;
-                notifyObservers(update);
-            }
-            return fileCount; 
+            counter++;
+            return counter; 
         }
     }
 
     protected String buildFileName(long id) 
     {
-        return directory + "/" + id + "." + FileManager.EXTENSION;
+        return directory + "/" + parentName + "." + id + "." + FileManager.EXTENSION;
     }
     
-    protected String buildFileName(String name)
+    protected String buildParentName()
     {
-        return directory + "/" + name + "." + FileManager.EXTENSION;
+        return directory + "/" + parentName + "." + FileManager.EXTENSION;
     }
     
     private void deleteFile0(String filename) throws IOException

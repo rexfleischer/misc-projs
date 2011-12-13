@@ -5,11 +5,9 @@
 package com.rf.fled.persistence.bplustree;
 
 import com.rf.fled.persistence.Browser;
-import com.rf.fled.persistence.filemanager.FileManager;
 import com.rf.fled.persistence.FledPersistenceException;
 import com.rf.fled.persistence.KeyValuePair;
 import com.rf.fled.persistence.Persistence;
-import com.rf.fled.persistence.filemanager.FileManager_FileSystemNoTree;
 import java.io.File;
 import java.util.Random;
 import junit.framework.Assert;
@@ -53,9 +51,10 @@ public class BPlusBrowserTest {
     
     public Persistence getBPlusTree(int count) throws FledPersistenceException 
     {
-        FileManager fileManager = new FileManager_FileSystemNoTree(DIRECTORY, 0);
-        Persistence instance = BPlusTree.createBPlusTree(fileManager, "test", count, null, null);
-        return instance;
+//        FileManager fileManager = new FileManager_FileSystemNoTree(DIRECTORY, 0);
+//        Persistence instance = BPlusTree.createBPlusTree(fileManager, "test", count, null, null);
+//        return instance;
+        return null;
     }
     
     @Test

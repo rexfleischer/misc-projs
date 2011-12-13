@@ -4,7 +4,7 @@
  */
 package com.rf.fled.persistence.fileio;
 
-import com.rf.fled.persistence.fileio.ByteArray;
+import com.rf.fled.persistence.util.ByteArray;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;

@@ -4,12 +4,19 @@
  */
 package com.rf.fled.persistence.bplustree;
 
+import com.rf.fled.persistence.tree.BPlusTree;
 import com.rf.fled.persistence.FledPersistenceException;
 import com.rf.fled.persistence.Persistence;
-import com.rf.fled.persistence.filemanager.FileManager;
-import com.rf.fled.persistence.filemanager.FileManager_FileSystemNoTree;
-import com.rf.fled.persistence.filemanager.FileManager_InMemory;
+import com.rf.fled.persistence.filemanager.FileManagerCacheType;
+import com.rf.fled.persistence.filemanager.FileManagerType;
+import com.rf.fled.persistence.tree.RecordCacheType;
+import com.rf.fled.persistence.tree.TreeType;
+import com.rf.fled.persistence.Provider;
+import com.rf.fled.persistence.ProviderHint;
+import com.rf.fled.persistence.transaction.TransactionType;
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import junit.framework.Assert;
 import org.junit.After;
@@ -57,72 +64,17 @@ public class BPlusTreeTest {
     
     public Persistence getBPlusTree(int count) throws FledPersistenceException 
     {
-//        FileManager fileManager = new FileManager_FileSystemNoTree(DIRECTORY, 0);
-        FileManager fileManager = new FileManager_InMemory();
-        Persistence instance = BPlusTree.createBPlusTree(fileManager, "test", count, null, null);
-        return instance;
-    }
-    
-//    @Test
-    public void testSpeed() throws Exception
-    {
-        // start with 8
-        int size = 8;
-        int count = 1001;
-        int check = 200;
-        FileManager fileManager = new FileManager_FileSystemNoTree(DIRECTORY, 0);
-        
-        for(int kk = 0; kk < 6; kk++)
-        {
-            Persistence instance = BPlusTree.createBPlusTree(fileManager, "test", size, null, null);
-
-            long start = System.currentTimeMillis();
-            for(int i = 0; i < count; i++)
-            {
-                MockValue value = new MockValue();
-                value.id = (long)(i + 1);
-                value.content = "hello world number " + (i + 1);
-                Object result = instance.insert((long)(i + 1), value, true);
-                Assert.assertNull(result);
-                if (i % check == 0)
-                {
-                    System.out.println("inserted " + i + " records with " + size);
-                }
-            }
-            System.out.println("finshed inserts in " + (System.currentTimeMillis() - start));
-
-            start = System.currentTimeMillis();
-            for(int i = 0; i < count; i++)
-            {
-                Object result = instance.select((long)(i + 1));
-                Assert.assertTrue(result instanceof MockValue);
-                MockValue value = (MockValue) result;
-                Assert.assertEquals(((long) (i + 1)), value.id);
-                Assert.assertEquals("hello world number " + (i + 1), value.content);
-                if (i % check == 0)
-                {
-                    System.out.println("read " + i + " records with " + size);
-                }
-            }
-            System.out.println("finshed reads in " + (System.currentTimeMillis() - start));
-
-            start = System.currentTimeMillis();
-            for(int i = 0; i < count; i++)
-            {
-                Object result = instance.delete((long)(i + 1));
-                Assert.assertTrue(result instanceof MockValue);
-                MockValue value = (MockValue) result;
-                Assert.assertEquals(((long) (i + 1)), value.id);
-                Assert.assertEquals("hello world number " + (i + 1), value.content);
-                if (i % check == 0)
-                {
-                    System.out.println("deleted " + i + " records with " + size);
-                }
-            }
-            System.out.println("finshed deletes in " + (System.currentTimeMillis() - start));
-            
-            size *= 2;
-        }
+        Map<String, Object> hints = new HashMap<String, Object>();
+        hints.put(ProviderHint.RECORDS_PER_PAGE.name(), 64);
+        return Provider.createPersistence(
+                DIRECTORY, 
+                "test",
+                TreeType.BPLUSTREE,
+                RecordCacheType.NONE, 
+                FileManagerType.FILE_SYSTEM_NO_TREE, 
+                FileManagerCacheType.NONE, 
+                TransactionType.NONE,
+                hints);
     }
     
 //    @Test
@@ -294,132 +246,12 @@ public class BPlusTreeTest {
         }
         ((BPlusTree) instance).dump();
     }
-
-//    /**
-//     * Test of size method, of class BPlusTree.
-//     */
+    
 //    @Test
-//    public void testSize() throws Exception {
-//        System.out.println("size");
-//        
-//        Persistence instance = getBPlusTree();
-//        
-//        long expResult = 0L;
-//        long result = instance.size();
-//        assertEquals(expResult, result);
-//        // TODO review the generated test code and remove the default call to fail.
-//        fail("The test case is a prototype.");
-//    }
-//
-//    /**
-//     * Test of browse method, of class BPlusTree.
-//     */
-//    @Test
-//    public void testBrowse_long() throws Exception {
-//        System.out.println("browse");
-//        long id = 0L;
-//        Persistence instance = getBPlusTree();
-//        Browser expResult = null;
-//        Browser result = instance.browse(id);
-//        assertEquals(expResult, result);
-//        // TODO review the generated test code and remove the default call to fail.
-//        fail("The test case is a prototype.");
-//    }
-//
-//    /**
-//     * Test of browse method, of class BPlusTree.
-//     */
-//    @Test
-//    public void testBrowse_0args() throws Exception {
-//        System.out.println("browse");
-//        Persistence instance = getBPlusTree();
-//        Browser expResult = null;
-//        Browser result = instance.browse();
-//        assertEquals(expResult, result);
-//        // TODO review the generated test code and remove the default call to fail.
-//        fail("The test case is a prototype.");
-//    }
-//
-//    /**
-//     * Test of select method, of class BPlusTree.
-//     */
-//    @Test
-//    public void testSelect() throws Exception {
-//        System.out.println("select");
-//        long id = 0L;
-//        Persistence instance = getBPlusTree();
-//        Object expResult = null;
-//        Object result = instance.select(id);
-//        assertEquals(expResult, result);
-//        // TODO review the generated test code and remove the default call to fail.
-//        fail("The test case is a prototype.");
-//    }
-//
-//    /**
-//     * Test of insert method, of class BPlusTree.
-//     */
-//    @Test
-//    public void testInsert() throws Exception {
-//        System.out.println("insert");
-//        long id = 0L;
-//        Object record = null;
-//        boolean replace = false;
-//        Persistence instance = getBPlusTree();
-//        Object expResult = null;
-//        Object result = instance.insert(id, record, replace);
-//        assertEquals(expResult, result);
-//        // TODO review the generated test code and remove the default call to fail.
-//        fail("The test case is a prototype.");
-//    }
-//
-//    /**
-//     * Test of delete method, of class BPlusTree.
-//     */
-//    @Test
-//    public void testDelete() throws Exception {
-//        System.out.println("delete");
-//        long id = 0L;
-//        Persistence instance = getBPlusTree();
-//        Object expResult = null;
-//        Object result = instance.delete(id);
-//        assertEquals(expResult, result);
-//        // TODO review the generated test code and remove the default call to fail.
-//        fail("The test case is a prototype.");
-//    }
-//
-//    /**
-//     * Test of beginTransaction method, of class BPlusTree.
-//     */
-//    @Test
-//    public void testBeginTransaction() throws Exception {
-//        System.out.println("beginTransaction");
-//        Persistence instance = getBPlusTree();
-//        instance.beginTransaction();
-//        // TODO review the generated test code and remove the default call to fail.
-//        fail("The test case is a prototype.");
-//    }
-//
-//    /**
-//     * Test of commit method, of class BPlusTree.
-//     */
-//    @Test
-//    public void testCommit() throws Exception {
-//        System.out.println("commit");
-//        Persistence instance = getBPlusTree();
-//        instance.commit();
-//        // TODO review the generated test code and remove the default call to fail.
-//        fail("The test case is a prototype.");
-//    }
-//
-//    /**
-//     * Test of rollback method, of class BPlusTree.
-//     */
-//    @Test
-//    public void testRollback() throws Exception {
-//        System.out.println("rollback");
-//        Persistence instance = getBPlusTree();
-//        instance.rollback();
-//        // TODO review the generated test code and remove the default call to fail.
-//        fail("The test case is a prototype.");
-//    }
+    public void testSelfPersistence() throws Exception
+    {
+        System.out.println("testSelfPersistence");
+        
+        
+    }
 }
