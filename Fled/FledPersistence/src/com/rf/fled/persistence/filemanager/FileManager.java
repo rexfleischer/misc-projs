@@ -14,7 +14,7 @@ import com.rf.fled.persistence.Serializer;
  */
 public interface FileManager 
 {
-    public static final String EXTENSION = "db";
+    public static final String EXTENSION = "fdb";
     
     /**
      * 
