@@ -1,0 +1,12 @@
+/LogDigester/LogConsumer/dist/
+/LogDigester/LogConsumer/build/
+/LogDigester/LogDigester/build/
+/LogDigester/LogDigester/dist/
+/LogDigester/LogMetrics/dist/
+/LogDigester/LogMetrics/build/
+/LogDigester/LogQuery/build/
+/LogDigester/LogQuery/dist/
+/LogDigester/LogThreadedHelper/build/
+/LogDigester/LogThreadedHelper/dist/
+/LogDigester/MemoryPresistence/dist/
+/LogDigester/MemoryPresistence/build/
