@@ -1,0 +1,20 @@
+.sidemenu_container
+{
+    float: left;
+    width: 22%;
+    margin: 6px 0px 6px 0px;
+}
+
+.sidemenu_container_container
+{
+    margin: 4px 2px 4px 0px;
+}
+
+.usermanual_content
+{
+    float: right;
+    width: 77%;
+    margin: 10px 2px 10px 2px;
+    padding: 2px;
+    min-height: 100px;
+}

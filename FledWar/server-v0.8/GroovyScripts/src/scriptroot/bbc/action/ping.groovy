@@ -1,0 +1,4 @@
+
+return [
+	"time" : System.currentTimeMillis()
+];

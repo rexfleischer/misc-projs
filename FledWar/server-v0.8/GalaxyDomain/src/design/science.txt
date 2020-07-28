@@ -1,0 +1,151 @@
+
+one of the largest parts of the game is managing what science is
+being worked on. there is supposed to be a gigantic amount of science
+that can be worked on, and its up to the user to manage the time 
+spent on certain science and trying to specialize to get an edge.
+the science will be split into different layer:
+* theoretical: this will take the longest amount of time to get, but
+is basically the gate into different branches of science. they have 
+to do with the highest level of science and, once discovered, there
+must be spent a lot of time and resources fully unlocking it. the user
+will start with a good amount of these unlocked, and will have a good
+amount of these ready for starting to fully unlock... but part of the
+excitement of the game is supposed to be the surprises of what type 
+of theoretical science can be developed, meaning that there will be
+much of the science only available through discoveries. a few examples
+of these highest level sciences are:
+*** robotics military
+*** clone military
+*** cyborge military
+*** mutant military
+*** different types of weapons
+*** different types of armors (once laser weapons are discovered, then the sub
+                               sciences for that are available)
+*** different types of thrusters
+*** things for living spaces and social engineering
+*** advanced forms of travel
+*** special weapons tactics like clocking
+*** deflective shields
+*** absorbing shields
+* these are the sub layers of science, or branches. here, the science is
+dependent on one another and can only be worked on one at a time (assuming
+the user has enough science points and gives enough time). this is the 
+simpler more intuitive part of the science because it will be more contained
+what is actually happening. for instance, a node within the laser weapon 
+brach would look like this:
+
+science.weapon.laser.light.soldier_loading_training_1 = [
+  name        : "Soldier Loading Training",
+  description : "This training will help raise the effeneincy of a soldier loading a laser weapon"
+  toggleable  : true,
+
+  series : [
+    
+  ]
+
+  cost : [
+    time      : 7200, // to hours
+    materials : [
+      currency : 10,000,000
+      
+    ]
+  ],
+  
+  learn_event : [
+    /${user}.science.sol/
+    /${user}.science.soldier.weapon.laser.soldier_loading_training.series = +1/
+  ],
+  
+  toggle : [
+    /${user}.attributes.soldier.weapon.laser.fire_speed =* 0.98/
+    /${user}.attributes.soldier.training.cost =* 1.02/
+    /${user}.attributes.soldier.training.time =* 1.02/
+  ],
+  
+];
+
+science.${MainGroup}.${BranchName}.${TechName} = [
+
+  name        : ${string : /.{5,25}/},
+  description : ${string : /.{25,255}/},
+  toggleable  : ${boolean},
+
+  cost : [
+    time : ${seconds : 0 < t},
+    materials : [
+      ...
+    ],
+  ],
+  effect : [
+    /${user}.science.${PathToEffect} = [*+-]?${value}/,
+    ...
+    /${user.faction}.${PathToEffect} = [*+-]?${value}/,
+    ...
+  ],
+];
+
+
+science.weapon.laser.theoretical = [
+    cost : [
+      time : 86400 (1 day),
+      materials : ...
+    ],
+    effect : [
+      /{user.science.weapon.laser.unlock = true}/
+      /{user.science.weapon.laser.ammo.unlock = true}/
+    ]
+  ]
+];
+
+
+  // held by individuals
+  light : [
+    cost : [
+      time : 3600 (one hour),
+      materials : ...
+    ],
+    effect : [
+      /{user.science.weapon.laser.light.unlock = true}/,
+    ],
+    children : [
+      training : [
+        cost : ...
+        materials : ...
+        effect : [
+          /{user.science.weapon.laser.light.accuracy = *1.02}/
+          /{user.science.weapon.laser.light.}/
+        ]
+      ]
+      
+    ]
+  ],
+  
+  // mounted on fighter craft and personal vehicles
+  medium : [
+
+    ...    
+  ],
+  
+  // large battle ships
+  large : [
+
+    ...
+  ],
+
+  // planet defenses
+  planet : [
+
+    ...
+  ],
+
+  ammo : [
+
+  ],
+  
+];
+
+
+the ge
+
+
+

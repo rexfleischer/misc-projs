@@ -1,0 +1,69 @@
+
+this model will describe the data model for the user. the user data 
+model will include all of the resources, populations, plans, production
+trade routes, military, foreign policies... everything that has to
+do with the user. while putting together the data model, its important 
+to take a few things into account:
+* not all information is available to the user. a user can only see
+things close to what they have control over... unless they have some
+sort of agreement with other users.
+* the user can only give commands to things they own... but the commands
+that are being executed must be expressible within this data model. just 
+like how the ${galaxy.model} expresses how to change and move the different
+objects, this data model must express the same.
+* there are limits to the things that we are putting together... for instance,
+a factory will have a throughput limit, but that limit cannot be met if 
+materials cannot get to it or the people can work there. also, if there is no
+place for materials to go (wearhouses can fill up or factories could not 
+handle all the material given), then the pipeline before the factory will
+max out and have to wait on the factory.
+* much of the changes will have to be some type of transaction, meaning,
+to ensure that users cant do something that will put thing in the negative
+somewhere, there has to be validation ran on every action the user wishes 
+to perform. 
+
+
+system_user = [
+  
+  username  : ${string : /[a-zA-Z0-9_\-]{4,25}/},
+  password  : ${byte[128]},
+  sessionid : ${byte[]},
+  instance  : ${byte[]},
+  email     : ${string : /[a-zA-Z0-9_\-]{4,25}@[a-zA-Z0-9_\-]{4,25}\.(com|net|org)/},
+  
+  rights    : [
+    ${string},
+    ...
+  ],
+  
+  client_vars : [
+    ${string} : ${object},
+    ...
+  ],
+  
+  session_vars : [
+    ${string} : ${object},
+    ...
+  ],
+  
+  messages : [
+    [:],
+    ...
+  ],
+  
+];
+
+client_model = [
+  
+  // this persists what the user has already managed to 
+  // learn in the science tree and what they unlocked
+  science : [
+    
+  ],
+
+  // 
+  attributes : [
+    base : [
+    ],
+  ]
+];

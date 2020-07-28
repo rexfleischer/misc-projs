@@ -1,0 +1,7 @@
+source C:\Users\REx\Desktop\webdev\melissa\application\init\create_user.sql
+
+source C:\Users\REx\Desktop\webdev\melissa\application\init\delete_user.sql
+
+source C:\Users\REx\Desktop\webdev\melissa\application\init\create_db.sql
+
+source C:\Users\REx\Desktop\webdev\melissa\application\init\delete_db.sql

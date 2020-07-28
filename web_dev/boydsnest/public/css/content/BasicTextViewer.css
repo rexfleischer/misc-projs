@@ -1,0 +1,16 @@
+
+fieldset.basictextviewer
+{
+    margin: 5px 7px;
+    padding: 3px;
+    border:1px solid #3C769D;
+    min-height: 100px;
+    float: none;
+}
+fieldset.basictextviewer_inner
+{
+    margin: 5px 0px;
+    padding: 3px;
+    border:1px solid black;
+    min-height: 100px;
+}

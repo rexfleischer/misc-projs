@@ -1,0 +1,54 @@
+
+#gameinterfacescreen{
+    position: relative;
+    overflow: hidden;
+}
+
+#gamebackgroundcanvas{
+    z-index:0;
+    float: left;
+}
+
+#gameforegroundcanvas{
+    z-index:1;
+    position:absolute;
+    top: 0px;
+    left:0px;
+}
+
+/*#gamestats {
+    margin-left: 5px;
+    width : 200px;
+    height : 500px;
+    background-color: #222222;
+    float: left;
+    color: red;
+}*/
+
+#bottomslider {
+    position: absolute;
+    background-color: red;
+}
+
+.gamemenucontainer {
+    position: absolute;
+    z-index : 5;
+    background-color : rgba(255,255,255,0.1);
+    padding : 5px;
+    color : rgba(255,255,255,0.7);
+}
+
+.popupmenucontainer {
+    position: absolute;
+    z-index : 5;
+    padding : 5px;
+    color : rgba(255,255,255,0.7);
+}
+
+.toolbar-helper {
+    width : auto;
+    max-width : 100%;
+    margin: 4px;
+    padding: 4px;
+    /*display: inline-block;*/
+}

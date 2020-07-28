@@ -1,0 +1,32 @@
+/* 
+    Document   : common
+    Created on : Apr 13, 2012, 8:36:57 PM
+    Author     : REx
+    Description:
+        Purpose of the stylesheet follows.
+*/
+
+/* 
+   TODO customize this sample style
+   Syntax recommendation http://www.w3.org/TR/REC-CSS2/
+*/
+
+root { 
+    display: block;
+}
+
+.canvas_div
+{
+    padding: 5px 5px 5px 5px;
+    width: 700px;
+    height: 500px;
+    border-style: solid;
+    border-width: 2px;
+    border-color: slateblue;
+}
+
+#game_canvas
+{
+    width: inherit;
+    height: inherit;
+}

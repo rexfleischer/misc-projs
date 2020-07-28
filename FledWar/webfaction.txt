@@ -1,0 +1,19 @@
+https://my.webfaction.com/
+rexfleischer
+@@11
+
+ssh:
+web363.webfaction.com
+rexfleischer
+@@11
+
+email:
+helloworld!
+
+mongo:
+/home/rexfleischer/webapps/mongodb/mongodb-linux-x86_64-2.2.1/bin/mongod --fork --logpath /home/rexfleischer/logs/user/mongodb.log --auth --dbpath /home/rexfleischer/webapps/mongodb/data --port 14871
+
+direct ip
+http://75.126.81.222:25530/
+http://75.126.81.222:25530/admin?action=status
+http://75.126.81.222:25530/admin?action=usage

@@ -1,0 +1,20 @@
+.form_setup
+{
+    width: 375px;
+    margin:10px 0px 2px 10px;
+}
+
+.form_input_submit
+{
+    float: right;
+}
+
+.form_input_text
+{
+    width: 200px;
+}
+
+.form_table
+{
+    width: 300px;
+}

@@ -1,0 +1,21 @@
+.login_form
+{
+    width: 375px;
+    margin:10px auto 2px auto;
+}
+
+.login_form_input_submit
+{
+    float: right;
+    margin-right: 8px;
+}
+
+.login_form_input_text
+{
+    width: 200px;
+}
+
+.login_form_table
+{
+    width: 300px;
+}

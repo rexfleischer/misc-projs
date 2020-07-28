@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title></title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <script src="../helper/Util.js" ></script>
+    <script src="tests.js" ></script>
+  </head>
+  <body>
+    <ol>
+      <li>
+        <script type="text/javascript">
+          document.write(assertTrue(function(){
+            var map = new OrderedHashMap();
+            map.add("123", "123");
+            map.add("234", "234");
+            map.add("345", "345");
+            return map.size() == 3;
+          }));
+        </script>
+      </li>
+      <li>
+        <script type="text/javascript">
+          document.write(assertTrue(function(){
+            var map = new OrderedHashMap();
+            map.add("123", "123");
+            map.add("234", "234");
+            map.add("345", "345");
+            return map.get("123") == "123" &&
+                   map.get("234") == "234" &&
+                   map.get("345") == "345";
+          }));
+        </script>
+      </li>
+      <li>
+        <script type="text/javascript">
+          document.write(assertTrue(function(){
+            var map = new OrderedHashMap();
+            map.add("123", "123");
+            map.add("234", "234");
+            map.add("345", "345");
+            return map.get_index(0) == "123" &&
+                   map.get_index(1) == "234" &&
+                   map.get_index(2) == "345";
+          }));
+        </script>
+      </li>
+      <li>
+        <script type="text/javascript">
+          document.write(assertTrue(function(){
+            var map = new OrderedHashMap();
+            map.add("123", "123");
+            map.add("234", "234");
+            map.add("345", "345");
+            return map.remove("123") == "123";
+          }));
+        </script>
+      </li>
+      <li>
+        <script type="text/javascript">
+          document.write(assertTrue(function(){
+            var map = new OrderedHashMap();
+            map.add("123", "123");
+            map.add("234", "234");
+            map.add("345", "345");
+            map.remove("123");
+            return map.size() == 2;
+          }));
+        </script>
+      </li>
+      <li>
+        <script type="text/javascript">
+          document.write(assertTrue(function(){
+            var map = new OrderedHashMap();
+            map.add("123", "123");
+            map.add("234", "234");
+            map.add("345", "345");
+            map.remove("123");
+            return map.get_index(0) == "234" &&
+                   map.get_index(1) == "345";
+          }));
+        </script>
+      </li>
+      <li>
+        <script type="text/javascript">
+          document.write(assertTrue(function(){
+            var map = new OrderedHashMap();
+            map.add("123", "123");
+            map.add("234", "234");
+            map.add("345", "345");
+            map.remove("123");
+            map.add_at_index(1, "456", "456");
+            return map.get_index(0) == "234" &&
+                   map.get_index(1) == "456" &&
+                   map.get_index(2) == "345";
+          }));
+        </script>
+      </li>
+    </ol>
+  </body>
+</html>

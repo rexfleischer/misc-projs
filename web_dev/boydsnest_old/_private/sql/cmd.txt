@@ -1,0 +1,11 @@
+login:
+c:\wamp\bin\mysql\mysql5.5.8\bin\mysql -h localhost -u root -p
+
+create user:
+c:\wamp\bin\mysql\mysql5.5.8\bin\mysql -h localhost -u root -p < C:\Users\REx\Desktop\web_dev\boydsnest_old\_private\sql\boydsnest_createuser.sql
+
+create database
+c:\wamp\bin\mysql\mysql5.5.8\bin\mysql -h localhost -u root -p < C:\Users\REx\Desktop\web_dev\boydsnest_old\_private\sql\boydsnest_createdatabase.sql
+
+create boydsnest
+c:\wamp\bin\mysql\mysql5.5.8\bin\mysql -h localhost -u root -p < C:\Users\REx\Desktop\web_dev\boydsnest_old\_private\sql\boydsnest_start.sql

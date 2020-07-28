@@ -1,0 +1,14 @@
+
+--> make users expire if required
+
+## FIXED ## --> make users 'isActive' functionality at login
+
+--> put limit on amount of users that can be created
+
+--> build scheming ability
+
+--> put in secret question / answer functionality
+
+--> upload and download functionality
+
+--> create functionality for admin home page

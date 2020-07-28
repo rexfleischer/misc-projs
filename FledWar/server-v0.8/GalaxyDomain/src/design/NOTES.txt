@@ -1,0 +1,38 @@
+
+this is the model definition for the entire simulation of the galaxy
+including the users. this will not have to do with how users interact,
+but strickly just the definition of the data (the models). there will
+be some implied interactions between objects but the actual simulation,
+which will include how updates and such are performed and broadcasted,
+will occur in another project.
+
+
+
+there are a few things that need to be considered before starting
+* the basic idea here is we're going to make every solar system
+a single document within mongo. the document will be *required to be
+updated at least once a second* during normal operations of simulation.
+but that implies we need to design the data to be none essential if
+locked by mongo.
+* during the first iteration of this, i defined the orbitals within a
+galaxy to have an "absolute" vector location from the center of the galaxy, 
+this will not be in orbials anymore because of the problems that caused.
+much of the problems came with resolution of doubles, meaning that if
+we wanted it to be exact enough, we would have to use software level
+integers instead of hardware floats. 
+* there are multiple types of systems. but the one that users interact 
+with will be the largest. some other types of system are for orbiting
+center of masses. for instance, a cluster of systems orbit around a
+common center of mass, that center of mass will be described as a type
+of system at the simulation level.
+* planets and moons are the only thing that can be inhabited by life 
+besides space stations and ships. the advantage to inhabiting a planet is 
+how much cheaper it is to live and produce things on a planet verses 
+a ship. building factories and cost of living is much lower on planets
+and moons. that means its much easier to expand if you can find a planet
+of some sort to build on.
+* note also that the type needs to be specified within the system. this
+means that the key "type" within a system document will be one of a few
+hardcoded values (or enums). so far the types are:
+** user
+** cluster

@@ -1,0 +1,32 @@
+
+consumable.gas = [
+  // this can be harvested only from some dust clouds,
+  // gassy planets, and rings around orbitals.
+  //
+  // that means that gases are harder to come by and
+  // are used for producing chemicals and different
+  // energies. 
+];
+
+consumable.ore = [
+  // this will come from harvesting different solid
+  // masses. for instance, an astroid belt, solid planet,
+  // or a battle ground that hasnt been cleaned are all
+  // places that raw ores can be found.
+  //
+  // most ores can be used for both refining into fuel
+  // or used for building materials.
+];
+
+consumable.light = [
+  // this will come from harvesting the light off
+  // of a star. the trick comes from the different
+  // colors. basically, meaning that a blue light
+  // verses are red light may be slightly different
+  // amounts of energy, but also can be used for
+  // different things in special cases. 
+  //
+  // this energy will be used for fuel and is able
+  // to be harvested easily 
+];
+
